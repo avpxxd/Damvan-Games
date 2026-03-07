@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maze Speedrun</title>
+    <title>Maze Speedrun - Global</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -86,6 +86,22 @@
                 min-width: 6.5rem;
             }
         }
+
+        /* Tab Styles */
+        .tab-btn {
+            padding: 6px 4px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            color: #64748b;
+        }
+        .tab-btn.active {
+            color: #22d3ee;
+            border-bottom-color: #22d3ee;
+        }
     </style>
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-950">
@@ -102,9 +118,17 @@
 
             <div class="bg-slate-900/50 p-6 rounded-2xl border border-slate-700/50 neon-border flex-shrink-0">
                 <h2 class="text-xl font-black text-cyan-400 italic mb-4 uppercase tracking-wider flex justify-between items-center">
-                    Global Top
+                    Leaderboard
                     <span id="loading-spinner" class="text-[10px] normal-case font-normal text-slate-500 animate-pulse">Syncing...</span>
                 </h2>
+
+                <!-- Tabs -->
+                <div class="flex justify-between border-b border-slate-800 mb-4 px-1">
+                    <button onclick="setTab('all')" id="tab-all" class="tab-btn active">All Time</button>
+                    <button onclick="setTab('today')" id="tab-today" class="tab-btn">Today</button>
+                    <button onclick="setTab('personal')" id="tab-personal" class="tab-btn">Your Top</button>
+                </div>
+
                 <div id="leaderboard-list" class="space-y-2 font-mono text-sm max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2">
                     <p class="text-slate-500 italic">Connecting to servers...</p>
                 </div>
@@ -194,6 +218,10 @@
                     <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
+
+            <footer class="mt-8 text-slate-500 text-[10px] text-center uppercase tracking-[0.2em] font-bold">
+                FIXED 6x6 GRID &bull; Adjusted Difficulty Curve
+            </footer>
         </main>
     </div>
 
@@ -236,6 +264,7 @@
         let globalScores = [];
         let leaderboardUnsubscribe = null;
         let leaderboardDisplayLimit = 10;
+        let activeTab = 'all';
 
         // Audio Objects
         const goalAudio = new Audio('goal.mp3');
@@ -313,7 +342,7 @@
         let mazeSize = FIXED_MAZE_SIZE;
         let cellSize = 0;
         let maze = [];
-        let player = { x: 0, y: 0 };
+        let player = { x: 0, y: 0, lastDir: 'right' };
         let gameActive = false;
         let lastTimestamp = 0;
 
@@ -330,13 +359,10 @@
             const huns = levelStr[0];
             const tens = levelStr[1];
             const ones = levelStr[2];
-            
             const d100 = document.getElementById('digit-100');
             const d10 = document.getElementById('digit-10');
             const d1 = document.getElementById('digit-1');
-            
             if (val >= 100 && d100) d100.style.display = 'block';
-            
             if (d100) d100.style.transform = `translateY(-${huns * 4.5}rem)`;
             if (d10) d10.style.transform = `translateY(-${tens * 4.5}rem)`;
             if (d1) d1.style.transform = `translateY(-${ones * 4.5}rem)`;
@@ -369,7 +395,8 @@
                 } else if (stack.length > 0) current = stack.pop();
                 else break;
             }
-            player = { x: 0, y: 0 };
+            player.x = 0;
+            player.y = 0;
         }
 
         function getUnvisitedNeighbors(cell) {
@@ -392,7 +419,10 @@
 
         function draw() {
             if (!maze || maze.length === 0 || !maze[0] || cellSize <= 0) return;
+            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Maze Walls
             ctx.strokeStyle = "#334155";
             ctx.lineCap = "round";
             ctx.lineWidth = Math.max(2, Math.floor(canvas.width / 80));
@@ -408,20 +438,51 @@
                     ctx.stroke();
                 }
             }
-            const padding = cellSize * 0.15;
-            ctx.fillStyle = "#22c55e";
-            ctx.shadowBlur = 15; ctx.shadowColor = "#22c55e";
+
+            // Draw Goal (Yellow Floating Trophy)
+            const goalX = (mazeSize - 1) * cellSize + cellSize / 2;
+            const goalY = (mazeSize - 1) * cellSize + cellSize / 2;
+            const time = performance.now() / 1000;
+            const bobOffset = Math.sin(time * 5) * (cellSize * 0.1); 
+            
+            ctx.save();
+            ctx.translate(goalX, goalY + bobOffset);
+            ctx.fillStyle = "#fbbf24"; 
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#fbbf24";
+            
+            const s = cellSize * 0.3; 
             ctx.beginPath();
-            ctx.roundRect((mazeSize - 1) * cellSize + padding, (mazeSize - 1) * cellSize + padding, cellSize - (padding * 2), cellSize - (padding * 2), 8);
+            ctx.moveTo(-s, -s);
+            ctx.lineTo(s, -s);
+            ctx.lineTo(s * 0.6, s * 0.5);
+            ctx.lineTo(-s * 0.6, s * 0.5);
+            ctx.closePath();
             ctx.fill();
-            ctx.shadowBlur = 0;
-            const pPadding = cellSize * 0.2;
-            ctx.fillStyle = "#22d3ee";
-            ctx.shadowBlur = 12; ctx.shadowColor = "#22d3ee";
+            ctx.fillRect(-s * 0.15, s * 0.5, s * 0.3, s * 0.3);
+            ctx.fillRect(-s * 0.5, s * 0.8, s, s * 0.2);
+            ctx.strokeStyle = "#fbbf24";
+            ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(-s * 0.8, -s * 0.4, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.arc(s * 0.8, -s * 0.4, s * 0.4, 0, Math.PI * 2); ctx.stroke();
+            ctx.restore();
+
+            // Draw Player (Clean Blue Square)
+            const px = player.x * cellSize + cellSize / 2;
+            const py = player.y * cellSize + cellSize / 2;
+            
+            ctx.save();
+            ctx.translate(px, py);
+            
+            const pSize = cellSize * 0.7;
+            ctx.fillStyle = "#22d3ee"; 
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#22d3ee";
             ctx.beginPath();
-            ctx.roundRect(player.x * cellSize + pPadding, player.y * cellSize + pPadding, cellSize - (pPadding * 2), cellSize - (pPadding * 2), 10);
+            ctx.roundRect(-pSize/2, -pSize/2, pSize, pSize, 8);
             ctx.fill();
-            ctx.shadowBlur = 0;
+            
+            ctx.restore();
         }
 
         window.startGame = function() {
@@ -450,7 +511,6 @@
             warningAudio.pause();
             warningAudio.currentTime = 0;
             playedWarningSound = false;
-            
             if (!first) {
                 level++;
                 if (level < 110) {
@@ -462,7 +522,6 @@
                     timeLimit = 2.9 - (step * 0.1);
                 }
             }
-            
             timeRemaining = timeLimit;
             updateCounterUI(level);
             if (limitDisplay) limitDisplay.innerText = timeLimit.toFixed(1);
@@ -489,7 +548,6 @@
         function updateUI() {
             if (!timerDisplay) return;
             timerDisplay.innerText = timeRemaining.toFixed(2);
-            // Updated to trigger at 3 seconds
             if (timeRemaining < 3) {
                 timerDisplay.style.color = "#ef4444"; 
                 timerDisplay.style.textShadow = "0 0 15px rgba(239, 68, 68, 0.6)";
@@ -525,7 +583,13 @@
             submitBtn.innerText = "Saving...";
             try {
                 const scoresCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
-                await addDoc(scoresCol, { name: name, level: level, timestamp: Date.now() });
+                // Added uid to document so "Your Top" works
+                await addDoc(scoresCol, { 
+                    name: name, 
+                    level: level, 
+                    timestamp: Date.now(),
+                    uid: currentUser.uid 
+                });
                 submitBtn.innerText = "Saved!";
                 setTimeout(() => resetGame(), 1000);
             } catch (e) {
@@ -565,8 +629,10 @@
                 const spinner = document.getElementById('loading-spinner');
                 if (spinner) spinner.style.display = 'none';
                 const scores = [];
-                snapshot.forEach(doc => scores.push(doc.data()));
-                scores.sort((a, b) => b.level - a.level || a.timestamp - b.timestamp);
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    scores.push(data);
+                });
                 globalScores = scores;
                 updateLeaderboardUI();
             }, (err) => {
@@ -575,15 +641,47 @@
             });
         }
 
+        window.setTab = function(tab) {
+            activeTab = tab;
+            leaderboardDisplayLimit = 10; // Reset limit when switching tabs
+            
+            // Update UI buttons
+            document.getElementById('tab-all').classList.remove('active');
+            document.getElementById('tab-today').classList.remove('active');
+            document.getElementById('tab-personal').classList.remove('active');
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            updateLeaderboardUI();
+        };
+
         function updateLeaderboardUI() {
-            if (globalScores.length === 0) {
-                leaderboardList.innerHTML = `<p class="text-slate-500 italic">No global runs yet...</p>`;
+            if (!leaderboardList) return;
+            
+            let filteredScores = [...globalScores];
+            const startOfToday = new Date().setHours(0,0,0,0);
+
+            if (activeTab === 'today') {
+                filteredScores = filteredScores.filter(s => s.timestamp >= startOfToday);
+            } else if (activeTab === 'personal') {
+                if (currentUser) {
+                    filteredScores = filteredScores.filter(s => s.uid === currentUser.uid);
+                } else {
+                    filteredScores = [];
+                }
+            }
+
+            // Sort filtered scores (Rule 2 logic)
+            filteredScores.sort((a, b) => b.level - a.level || a.timestamp - b.timestamp);
+
+            if (filteredScores.length === 0) {
+                const msg = activeTab === 'personal' ? "No personal runs yet..." : "No global runs yet...";
+                leaderboardList.innerHTML = `<p class="text-slate-500 italic">${msg}</p>`;
                 if (seeMoreBtn) seeMoreBtn.classList.add('hidden');
                 return;
             }
-            const displayScores = globalScores.slice(0, leaderboardDisplayLimit);
-            const h2 = document.querySelector('#leaderboard-section h2');
-            if (h2) h2.innerHTML = `Global Top ${leaderboardDisplayLimit} <span id="loading-spinner" class="text-[10px] normal-case font-normal text-slate-500 animate-pulse" style="display:none">Syncing...</span>`;
+
+            const displayScores = filteredScores.slice(0, leaderboardDisplayLimit);
+            
             leaderboardList.innerHTML = displayScores.map((s, i) => `
                 <div class="flex justify-between items-center py-2 border-b border-slate-800 last:border-0">
                     <div class="flex items-center gap-3 overflow-hidden">
@@ -593,8 +691,9 @@
                     <span class="text-cyan-500 font-bold ml-2">Lvl ${s.level}</span>
                 </div>
             `).join('');
+
             if (seeMoreBtn) {
-                if (globalScores.length > 10 && leaderboardDisplayLimit === 10) seeMoreBtn.classList.remove('hidden');
+                if (filteredScores.length > 10 && leaderboardDisplayLimit === 10) seeMoreBtn.classList.remove('hidden');
                 else seeMoreBtn.classList.add('hidden');
             }
         }
@@ -608,6 +707,7 @@
             if (!gameActive) return;
             const cell = maze[player.y][player.x];
             if ((dx === 1 && cell.walls[1]) || (dx === -1 && cell.walls[3]) || (dy === 1 && cell.walls[2]) || (dy === -1 && cell.walls[0])) return;
+            
             player.x += dx; player.y += dy;
             if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
                 warningAudio.pause();
