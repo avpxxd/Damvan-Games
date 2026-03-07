@@ -158,26 +158,50 @@
         let globalScores = [];
         let leaderboardUnsubscribe = null;
 
-        // Expanded Profanity Filter
-        const RESTRICTED_TERMS = [ 'fuck', 'shit', 'asshole', 'bitch', 'nigger', 'faggot', 'cunt', 'dick', 'pussy', 'slut', 'whore', 'retard', 'fag', 'nigga', 
-        'bastard', 'cock', 'jerk', 'porn', 'sex', 'tit', 'boob', 'vagina', 'penis', 'cum', 'dumbass', 'jackass', 'motherfucker', 'twat', 
-        'wanker', 'prick', 'bollocks', 'arse', 'chink', 'kike', 'spic', 'wetback', 'nazi', 'hitler', 'rape', 'pedo', 'cock', 'ni99a' 
+        // Massive Upgrade to Profanity Filter
+        const RESTRICTED_TERMS = [
+            'fuck', 'shit', 'asshole', 'bitch', 'nigger', 'faggot', 'cunt', 'dick', 'pussy', 'slut', 'whore',
+            'retard', 'fag', 'nigga', 'bastard', 'cock', 'jerk', 'porn', 'sex', 'tit', 'boob', 'vagina', 'penis',
+            'cum', 'dumbass', 'jackass', 'motherfucker', 'twat', 'wanker', 'prick', 'bollocks', 'arse', 'chink',
+            'kike', 'spic', 'wetback', 'nazi', 'hitler', 'rape', 'pedo', 'homo', 'dyke', 'coon', 'jap', 'gook',
+            'negro', 'clit', 'labia', 'scrotum', 'twat', 'piss', 'shat', 'fart', 'boner'
         ];
         
         function isNameClean(name) {
-            if (!name) return false;
-            const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, '');
-            const check = (str) => RESTRICTED_TERMS.some(term => str.includes(term));
-            if (check(normalized)) return false;
+            if (!name || name.trim().length === 0) return false;
+            
+            // 1. Core mapping for leetspeak and symbols
             const leetMap = {
-                '0': 'o', '1': 'i', '2': 'z', '3': 'e', '4': 'a', '5': 's', 
-                '6': 'g', '7': 't', '8': 'b', '9': 'g', '@': 'a', '$': 's', 
-                '!': 'i', '+': 't', 'x': 'x'
+                '0':'o', '1':'i', '2':'z', '3':'e', '4':'a', '5':'s', '6':'g', '7':'t', '8':'b', '9':'g',
+                '@':'a', '$':'s', '!':'i', '+':'t', 'v':'u', 'x':'x', '(': 'c', '[': 'c', '{': 'c', '|': 'i',
+                '*':'', '#':'', '%':'', '^':''
             };
-            let deLeeted = normalized.split('').map(char => leetMap[char] || char).join('');
-            if (check(deLeeted)) return false;
-            const deduped = deLeeted.replace(/(.)\1+/g, '$1');
-            if (check(deduped)) return false;
+            
+            const rawLower = name.toLowerCase();
+            
+            // 2. Build translated version (replaces symbols with letters)
+            let translated = "";
+            for (let char of rawLower) {
+                translated += leetMap[char] || char;
+            }
+            
+            // 3. Normalized version (alphanumeric only)
+            const normalized = translated.replace(/[^a-z0-9]/g, '');
+            
+            // 4. Deduplicated version (catch "ffffuucckk")
+            const deduped = normalized.replace(/(.)\1+/g, '$1');
+
+            // 5. Check against restricted list
+            // We check normalized, deduped, and the original to be safe
+            const checkStrings = [normalized, deduped, rawLower.replace(/[^a-z0-9]/g, '')];
+            
+            for (const str of checkStrings) {
+                if (str.length === 0) continue;
+                for (const term of RESTRICTED_TERMS) {
+                    if (str.includes(term)) return false;
+                }
+            }
+
             return true;
         }
 
@@ -404,7 +428,7 @@
 
         window.submitScore = async function() {
             if (!currentUser || !db) return;
-            const name = document.getElementById('player-name').value.trim() || "Anonymous";
+            const name = document.getElementById('player-name').value.trim();
             const submitBtn = document.getElementById('submit-btn');
             const errorLabel = document.getElementById('name-error');
             
