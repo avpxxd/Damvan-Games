@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maze Speedrun</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            overflow: hidden;
+            touch-action: none;
+        }
+        canvas {
+            image-rendering: pixelated;
+        }
+        .neon-text {
+            text-shadow: 0 0 10px rgba(34, 211, 238, 0.8), 0 0 20px rgba(34, 211, 238, 0.4);
+        }
+        .neon-border {
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Game UI Overlay -->
+    <div id="game-ui" class="w-full max-w-2xl mb-4 flex justify-between items-end px-2">
+        <div>
+            <h1 class="text-3xl font-black tracking-tighter neon-text uppercase italic">Maze Speedrun</h1>
+            <p class="text-slate-400 text-sm font-mono uppercase tracking-tighter">LEVEL: <span id="level-display" class="text-cyan-400">1</span></p>
+        </div>
+        <div class="text-right">
+            <p class="text-xs text-slate-500 uppercase font-bold">Time Limit: <span id="limit-display">10.0</span>s</p>
+            <div id="timer-container" class="text-5xl font-mono font-bold text-cyan-400 tabular-nums">
+                10.00
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Game Area -->
+    <div class="relative bg-slate-900 rounded-xl p-2 border-2 border-slate-700 neon-border">
+        <canvas id="mazeCanvas"></canvas>
+        
+        <!-- Start/Game Over Screens -->
+        <div id="overlay" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center rounded-lg z-10 transition-opacity duration-300">
+            <div id="start-screen" class="text-center p-8">
+                <h2 class="text-4xl font-black mb-4 text-cyan-400 italic">GO FAST</h2>
+                <p class="text-slate-300 mb-6 max-w-xs mx-auto">Reach the green square before time runs out. The timer shrinks every level!</p>
+                <div class="flex gap-4 justify-center mb-8 text-sm">
+                    <kbd class="px-3 py-2 bg-slate-800 border-b-4 border-slate-950 rounded text-slate-300 font-bold">W</kbd>
+                    <kbd class="px-3 py-2 bg-slate-800 border-b-4 border-slate-950 rounded text-slate-300 font-bold">A</kbd>
+                    <kbd class="px-3 py-2 bg-slate-800 border-b-4 border-slate-950 rounded text-slate-300 font-bold">S</kbd>
+                    <kbd class="px-3 py-2 bg-slate-800 border-b-4 border-slate-950 rounded text-slate-300 font-bold">D</kbd>
+                </div>
+                <button onclick="startGame()" class="px-10 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-full transition-all transform hover:scale-105 active:scale-95 uppercase shadow-lg shadow-cyan-500/20">Start Run</button>
+            </div>
+
+            <div id="gameover-screen" class="hidden text-center p-8">
+                <h2 class="text-5xl font-black mb-2 text-rose-500 italic">OUT OF TIME</h2>
+                <p class="text-slate-400 mb-8">You conquered <span id="final-level" class="text-white font-bold text-xl">0</span> levels</p>
+                <button onclick="startGame()" class="px-10 py-4 bg-white text-slate-950 font-black rounded-full transition-all transform hover:scale-105 active:scale-95 uppercase">Try Again</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-6 text-slate-500 text-[10px] text-center uppercase tracking-[0.2em] font-bold">
+        FIXED 6x6 GRID &bull; 0.1s reduction/level &bull; Min 1.0s
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mazeCanvas');
+        const ctx = canvas.getContext('2d');
+        const timerDisplay = document.getElementById('timer-container');
+        const levelDisplay = document.getElementById('level-display');
+        const limitDisplay = document.getElementById('limit-display');
+        const overlay = document.getElementById('overlay');
+        const startScreen = document.getElementById('start-screen');
+        const gameoverScreen = document.getElementById('gameover-screen');
+        const finalLevelSpan = document.getElementById('final-level');
+
+        // Game Configuration
+        const FIXED_MAZE_SIZE = 6;
+        const INITIAL_TIME_LIMIT = 10;
+        
+        let level = 1;
+        let timeRemaining = 10;
+        let timeLimit = 10;
+        let mazeSize = FIXED_MAZE_SIZE;
+        let cellSize = 0;
+        let maze = [];
+        let player = { x: 0, y: 0 };
+        let gameActive = false;
+        let lastTimestamp = 0;
+
+        class Cell {
+            constructor(r, c) {
+                this.r = r;
+                this.c = c;
+                this.walls = [true, true, true, true]; // Top, Right, Bottom, Left
+                this.visited = false;
+            }
+        }
+
+        function initCanvas() {
+            const containerSize = Math.min(window.innerWidth - 40, 500);
+            canvas.width = containerSize;
+            canvas.height = containerSize;
+            cellSize = canvas.width / mazeSize;
+        }
+
+        function generateMaze(size) {
+            mazeSize = size;
+            cellSize = canvas.width / mazeSize;
+            maze = [];
+            for (let r = 0; r < mazeSize; r++) {
+                let row = [];
+                for (let c = 0; c < mazeSize; c++) {
+                    row.push(new Cell(r, c));
+                }
+                maze.push(row);
+            }
+
+            let stack = [];
+            let current = maze[0][0];
+            current.visited = true;
+
+            while (true) {
+                let neighbors = getUnvisitedNeighbors(current);
+                if (neighbors.length > 0) {
+                    let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+                    removeWalls(current, next);
+                    stack.push(current);
+                    next.visited = true;
+                    current = next;
+                } else if (stack.length > 0) {
+                    current = stack.pop();
+                } else {
+                    break;
+                }
+            }
+            player = { x: 0, y: 0 };
+        }
+
+        function getUnvisitedNeighbors(cell) {
+            let neighbors = [];
+            let { r, c } = cell;
+            if (r > 0 && !maze[r - 1][c].visited) neighbors.push(maze[r - 1][c]);
+            if (r < mazeSize - 1 && !maze[r + 1][c].visited) neighbors.push(maze[r + 1][c]);
+            if (c > 0 && !maze[r][c - 1].visited) neighbors.push(maze[r][c - 1]);
+            if (c < mazeSize - 1 && !maze[r][c + 1].visited) neighbors.push(maze[r][c + 1]);
+            return neighbors;
+        }
+
+        function removeWalls(a, b) {
+            let dr = a.r - b.r;
+            let dc = a.c - b.c;
+            if (dr === 1) { a.walls[0] = false; b.walls[2] = false; }
+            else if (dr === -1) { a.walls[2] = false; b.walls[0] = false; }
+            if (dc === 1) { a.walls[3] = false; b.walls[1] = false; }
+            else if (dc === -1) { a.walls[1] = false; b.walls[3] = false; }
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw Maze Walls
+            ctx.strokeStyle = "#334155";
+            ctx.lineCap = "round";
+            ctx.lineWidth = 6;
+            for (let r = 0; r < mazeSize; r++) {
+                for (let c = 0; c < mazeSize; c++) {
+                    let x = c * cellSize;
+                    let y = r * cellSize;
+                    let cell = maze[r][c];
+                    
+                    ctx.beginPath();
+                    if (cell.walls[0]) { ctx.moveTo(x, y); ctx.lineTo(x + cellSize, y); }
+                    if (cell.walls[1]) { ctx.moveTo(x + cellSize, y); ctx.lineTo(x + cellSize, y + cellSize); }
+                    if (cell.walls[2]) { ctx.moveTo(x, y + cellSize); ctx.lineTo(x + cellSize, y + cellSize); }
+                    if (cell.walls[3]) { ctx.moveTo(x, y); ctx.lineTo(x, y + cellSize); }
+                    ctx.stroke();
+                }
+            }
+
+            // Draw Goal
+            const padding = cellSize * 0.15;
+            ctx.fillStyle = "#22c55e";
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = "#22c55e";
+            ctx.beginPath();
+            ctx.roundRect(
+                (mazeSize - 1) * cellSize + padding, 
+                (mazeSize - 1) * cellSize + padding, 
+                cellSize - (padding * 2), 
+                cellSize - (padding * 2), 
+                8
+            );
+            ctx.fill();
+            ctx.shadowBlur = 0;
+
+            // Draw Player
+            const pPadding = cellSize * 0.2;
+            ctx.fillStyle = "#22d3ee";
+            ctx.shadowBlur = 12;
+            ctx.shadowColor = "#22d3ee";
+            ctx.beginPath();
+            ctx.roundRect(
+                player.x * cellSize + pPadding, 
+                player.y * cellSize + pPadding, 
+                cellSize - (pPadding * 2), 
+                cellSize - (pPadding * 2), 
+                10
+            );
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+
+        function startGame() {
+            level = 1;
+            timeLimit = INITIAL_TIME_LIMIT;
+            timeRemaining = timeLimit;
+            mazeSize = FIXED_MAZE_SIZE;
+            
+            overlay.classList.add('hidden');
+            startScreen.classList.add('hidden');
+            gameoverScreen.classList.add('hidden');
+            
+            initCanvas();
+            nextLevel(true);
+            gameActive = true;
+            lastTimestamp = performance.now();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function nextLevel(first = false) {
+            if (!first) {
+                level++;
+                timeLimit = Math.max(1.0, INITIAL_TIME_LIMIT - ((level - 1) * 0.1));
+            }
+            
+            timeRemaining = timeLimit;
+            levelDisplay.innerText = level;
+            limitDisplay.innerText = timeLimit.toFixed(1);
+            generateMaze(FIXED_MAZE_SIZE);
+            draw();
+        }
+
+        function gameLoop(timestamp) {
+            if (!gameActive) return;
+
+            const delta = (timestamp - lastTimestamp) / 1000;
+            lastTimestamp = timestamp;
+
+            timeRemaining -= delta;
+            if (timeRemaining <= 0) {
+                timeRemaining = 0;
+                updateUI();
+                endGame();
+                return;
+            }
+
+            updateUI();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function updateUI() {
+            timerDisplay.innerText = timeRemaining.toFixed(2);
+            if (timeRemaining < 3) {
+                timerDisplay.classList.add('text-rose-500');
+                timerDisplay.classList.remove('text-cyan-400');
+            } else {
+                timerDisplay.classList.remove('text-rose-500');
+                timerDisplay.classList.add('text-cyan-400');
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            finalLevelSpan.innerText = level;
+            overlay.classList.remove('hidden');
+            gameoverScreen.classList.remove('hidden');
+        }
+
+        function movePlayer(dx, dy) {
+            if (!gameActive) return;
+
+            const currentCell = maze[player.y][player.x];
+            
+            if (dx === 1 && currentCell.walls[1]) return;
+            if (dx === -1 && currentCell.walls[3]) return;
+            if (dy === 1 && currentCell.walls[2]) return;
+            if (dy === -1 && currentCell.walls[0]) return;
+
+            player.x += dx;
+            player.y += dy;
+
+            if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
+                nextLevel();
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            const key = e.key.toLowerCase();
+            if (key === 'w' || key === 'arrowup') movePlayer(0, -1);
+            if (key === 's' || key === 'arrowdown') movePlayer(0, 1);
+            if (key === 'a' || key === 'arrowleft') movePlayer(-1, 0);
+            if (key === 'd' || key === 'arrowright') movePlayer(1, 0);
+        });
+
+        window.addEventListener('resize', () => {
+            initCanvas();
+            draw();
+        });
+
+        initCanvas();
+        generateMaze(FIXED_MAZE_SIZE);
+        draw();
+
+    </script>
+</body>
+</html>
