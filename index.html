@@ -124,6 +124,9 @@
                 <div class="flex flex-col items-start gap-1">
                     <span class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] ml-1">Level</span>
                     <div class="boxed-display">
+                        <div class="counter-digit" id="digit-100" style="display: none; width: 2.5rem; height: 100%; transition: transform 0.6s cubic-bezier(0.45, 0.05, 0.55, 0.95);">
+                            <div class="digit-strip"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
+                        </div>
                         <div class="counter-digit" id="digit-10">
                             <div class="digit-strip"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></div>
                         </div>
@@ -191,6 +194,10 @@
                     <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
+
+            <footer class="mt-8 text-slate-500 text-[10px] text-center uppercase tracking-[0.2em] font-bold">
+                FIXED 6x6 GRID &bull; Adjusted Difficulty Curve
+            </footer>
         </main>
     </div>
 
@@ -323,12 +330,18 @@
         }
 
         function updateCounterUI(val) {
-            const levelStr = val.toString().padStart(2, '0');
-            const tens = levelStr[0];
-            const ones = levelStr[1];
+            const levelStr = val.toString().padStart(3, '0');
+            const huns = levelStr[0];
+            const tens = levelStr[1];
+            const ones = levelStr[2];
             
+            const d100 = document.getElementById('digit-100');
             const d10 = document.getElementById('digit-10');
             const d1 = document.getElementById('digit-1');
+            
+            if (val >= 100 && d100) d100.style.display = 'block';
+            
+            if (d100) d100.style.transform = `translateY(-${huns * 4.5}rem)`;
             if (d10) d10.style.transform = `translateY(-${tens * 4.5}rem)`;
             if (d1) d1.style.transform = `translateY(-${ones * 4.5}rem)`;
         }
@@ -383,7 +396,6 @@
 
         function draw() {
             if (!maze || maze.length === 0 || !maze[0] || cellSize <= 0) return;
-            
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             ctx.strokeStyle = "#334155";
             ctx.lineCap = "round";
@@ -445,8 +457,16 @@
             
             if (!first) {
                 level++;
-                timeLimit = Math.max(1.0, INITIAL_TIME_LIMIT - ((level - 1) * 0.1));
+                if (level < 110) {
+                    timeLimit = Math.max(3.0, 10.0 - ((level - 1) * 0.1));
+                } else if (level >= 250) {
+                    timeLimit = 1.5;
+                } else {
+                    let step = Math.floor((level - 110) / 10);
+                    timeLimit = 2.9 - (step * 0.1);
+                }
             }
+            
             timeRemaining = timeLimit;
             updateCounterUI(level);
             if (limitDisplay) limitDisplay.innerText = timeLimit.toFixed(1);
@@ -473,15 +493,16 @@
         function updateUI() {
             if (!timerDisplay) return;
             timerDisplay.innerText = timeRemaining.toFixed(2);
-            if (timeRemaining < 1) {
-                timerDisplay.style.color = "#ef4444"; // rose-500
+            // Updated to trigger at 3 seconds
+            if (timeRemaining < 3) {
+                timerDisplay.style.color = "#ef4444"; 
                 timerDisplay.style.textShadow = "0 0 15px rgba(239, 68, 68, 0.6)";
                 if (!playedWarningSound && gameActive) {
                     warningAudio.play().catch(() => {});
                     playedWarningSound = true;
                 }
             } else {
-                timerDisplay.style.color = "#22d3ee"; // cyan-400
+                timerDisplay.style.color = "#22d3ee"; 
                 timerDisplay.style.textShadow = "0 0 15px rgba(34, 211, 238, 0.6)";
             }
         }
