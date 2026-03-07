@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -45,6 +46,7 @@
             <div id="leaderboard-list" class="space-y-2 font-mono text-sm max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2">
                 <p class="text-slate-500 italic">Connecting to servers...</p>
             </div>
+            <div id="auth-status" class="mt-4 text-[10px] uppercase font-bold text-slate-600 tracking-widest text-center"></div>
         </aside>
 
         <!-- Game Section -->
@@ -116,7 +118,7 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.10.0/firebase-firestore.js";
 
-        /** * 🔥 Updated Firebase Configuration from your snippet
+        /** * 🔥 Firebase Configuration
          */
         const githubConfig = {
             apiKey: "AIzaSyC8DJWDZ6gBArzoGpbQVVyTLSHiVM0KXTM",
@@ -128,7 +130,6 @@
             measurementId: "G-BTRH8VYY3M"
         };
 
-        // Environment Detection
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'maze-speedrun-global';
         let firebaseConfig = null;
         
@@ -163,6 +164,8 @@
 
         const initAuth = async () => {
             if (!auth) return;
+            const statusDiv = document.getElementById('auth-status');
+            statusDiv.innerText = "Connecting Auth...";
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
@@ -171,6 +174,8 @@
                 }
             } catch (err) {
                 console.error("Auth failed:", err);
+                statusDiv.innerText = "Auth Offline";
+                statusDiv.className = "mt-4 text-[10px] uppercase font-bold text-rose-500 tracking-widest text-center";
                 await signInAnonymously(auth).catch(() => {});
             }
         };
@@ -178,7 +183,11 @@
         if (auth) {
             onAuthStateChanged(auth, (user) => {
                 currentUser = user;
-                if (user && !leaderboardUnsubscribe) setupLeaderboardListener();
+                if (user) {
+                    document.getElementById('auth-status').innerText = "Connected Globally";
+                    document.getElementById('auth-status').className = "mt-4 text-[10px] uppercase font-bold text-cyan-500/50 tracking-widest text-center";
+                    if (!leaderboardUnsubscribe) setupLeaderboardListener();
+                }
             });
             initAuth();
         } else {
@@ -382,7 +391,6 @@
             submitBtn.innerText = "Saving...";
 
             try {
-                // Rule 1: Use specific path
                 const scoresCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 await addDoc(scoresCol, { name: name, level: level, timestamp: Date.now() });
                 submitBtn.innerText = "Saved!";
@@ -405,7 +413,12 @@
                 updateLeaderboardUI();
             }, (err) => {
                 loadingSpinner.style.display = 'none';
-                leaderboardList.innerHTML = `<p class="text-rose-500 italic text-xs">Sync Error</p>`;
+                console.error("Firestore error:", err);
+                if (err.code === 'permission-denied') {
+                    leaderboardList.innerHTML = `<p class="text-rose-500 italic text-xs leading-tight">Database Rules Error.<br>Check Firestore Rules!</p>`;
+                } else {
+                    leaderboardList.innerHTML = `<p class="text-rose-500 italic text-xs">Sync Error: ${err.code}</p>`;
+                }
             });
         }
 
