@@ -40,12 +40,18 @@
         <!-- Leaderboard Section -->
         <aside id="leaderboard-section" class="order-2 md:order-1 w-full md:w-72 lg:w-80 bg-slate-900/50 p-6 rounded-2xl border border-slate-700/50 neon-border flex-shrink-0">
             <h2 class="text-xl font-black text-cyan-400 italic mb-4 uppercase tracking-wider flex justify-between items-center">
-                Global Top 10
+                Global Top
                 <span id="loading-spinner" class="text-[10px] normal-case font-normal text-slate-500 animate-pulse">Syncing...</span>
             </h2>
             <div id="leaderboard-list" class="space-y-2 font-mono text-sm max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2">
                 <p class="text-slate-500 italic">Connecting to servers...</p>
             </div>
+            
+            <!-- See More Button -->
+            <button id="see-more-btn" onclick="expandLeaderboard()" class="hidden w-full mt-4 py-2 text-[10px] uppercase font-bold text-cyan-500/50 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/50 rounded transition-all tracking-widest">
+                See Top 50
+            </button>
+
             <div id="auth-status" class="mt-4 p-2 rounded bg-slate-950/50 text-[10px] uppercase font-bold text-slate-600 tracking-widest text-center leading-tight min-h-[40px] flex items-center justify-center"></div>
         </aside>
 
@@ -157,8 +163,9 @@
         let currentUser = null;
         let globalScores = [];
         let leaderboardUnsubscribe = null;
+        let leaderboardDisplayLimit = 10;
 
-        // Massive Upgrade to Profanity Filter
+        // Profanity Filter
         const RESTRICTED_TERMS = [
             'fuck', 'shit', 'asshole', 'bitch', 'nigger', 'faggot', 'cunt', 'dick', 'pussy', 'slut', 'whore',
             'retard', 'fag', 'nigga', 'bastard', 'cock', 'jerk', 'porn', 'sex', 'tit', 'boob', 'vagina', 'penis',
@@ -169,38 +176,21 @@
         
         function isNameClean(name) {
             if (!name || name.trim().length === 0) return false;
-            
-            // 1. Core mapping for leetspeak and symbols
             const leetMap = {
                 '0':'o', '1':'i', '2':'z', '3':'e', '4':'a', '5':'s', '6':'g', '7':'t', '8':'b', '9':'g',
                 '@':'a', '$':'s', '!':'i', '+':'t', 'v':'u', 'x':'x', '(': 'c', '[': 'c', '{': 'c', '|': 'i',
                 '*':'', '#':'', '%':'', '^':''
             };
-            
             const rawLower = name.toLowerCase();
-            
-            // 2. Build translated version (replaces symbols with letters)
             let translated = "";
-            for (let char of rawLower) {
-                translated += leetMap[char] || char;
-            }
-            
-            // 3. Normalized version (alphanumeric only)
+            for (let char of rawLower) { translated += leetMap[char] || char; }
             const normalized = translated.replace(/[^a-z0-9]/g, '');
-            
-            // 4. Deduplicated version (catch "ffffuucckk")
             const deduped = normalized.replace(/(.)\1+/g, '$1');
-
-            // 5. Check against restricted list
             const checkStrings = [normalized, deduped, rawLower.replace(/[^a-z0-9]/g, '')];
-            
             for (const str of checkStrings) {
                 if (str.length === 0) continue;
-                for (const term of RESTRICTED_TERMS) {
-                    if (str.includes(term)) return false;
-                }
+                for (const term of RESTRICTED_TERMS) { if (str.includes(term)) return false; }
             }
-
             return true;
         }
 
@@ -237,10 +227,7 @@
             });
             initAuth();
         } else {
-            document.getElementById('leaderboard-list').innerHTML = `
-                <div class="text-slate-500 text-xs italic space-y-2">
-                    <p>Global features unavailable.</p>
-                </div>`;
+            document.getElementById('leaderboard-list').innerHTML = `<div class="text-slate-500 text-xs italic space-y-2"><p>Global features unavailable.</p></div>`;
             document.getElementById('loading-spinner').style.display = 'none';
         }
 
@@ -256,6 +243,7 @@
         const finalLevelSpan = document.getElementById('final-level');
         const leaderboardList = document.getElementById('leaderboard-list');
         const loadingSpinner = document.getElementById('loading-spinner');
+        const seeMoreBtn = document.getElementById('see-more-btn');
 
         const FIXED_MAZE_SIZE = 6;
         const INITIAL_TIME_LIMIT = 10;
@@ -279,12 +267,9 @@
 
         function initCanvas() {
             let containerWidth = canvasContainer.clientWidth;
-            if (containerWidth <= 0) {
-                containerWidth = Math.min(window.innerWidth - 64, 500);
-            }
+            if (containerWidth <= 0) { containerWidth = Math.min(window.innerWidth - 64, 500); }
             const size = Math.max(200, Math.min(containerWidth - 16, 500));
-            canvas.width = size;
-            canvas.height = size;
+            canvas.width = size; canvas.height = size;
             cellSize = canvas.width / mazeSize;
         }
 
@@ -430,13 +415,10 @@
             const name = document.getElementById('player-name').value.trim();
             const submitBtn = document.getElementById('submit-btn');
             const errorLabel = document.getElementById('name-error');
-            
             errorLabel.classList.add('hidden');
             if (!isNameClean(name)) { errorLabel.classList.remove('hidden'); return; }
-
             submitBtn.disabled = true;
             submitBtn.innerText = "Saving...";
-
             try {
                 const scoresCol = collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard');
                 await addDoc(scoresCol, { name: name, level: level, timestamp: Date.now() });
@@ -450,27 +432,17 @@
 
         window.shareScore = function() {
             const currentLevel = document.getElementById('final-level').innerText;
-            // Combine text and link to ensure apps that only check 'text' or 'url' both get the full info
             const shareText = `I just got a new High Score of ${currentLevel} on Maze Speedrun! Check it out at https://games.damvan.ca`;
             const shareBtn = document.getElementById('share-btn');
-            
             if (navigator.share) {
-                navigator.share({
-                    title: 'Maze Speedrun',
-                    text: shareText
-                }).catch(() => {
-                    copyToClipboardFallback(shareText, shareBtn);
-                });
-            } else {
-                copyToClipboardFallback(shareText, shareBtn);
-            }
+                navigator.share({ title: 'Maze Speedrun', text: shareText }).catch(() => { copyToClipboardFallback(shareText, shareBtn); });
+            } else { copyToClipboardFallback(shareText, shareBtn); }
         };
 
         function copyToClipboardFallback(text, button) {
             const input = document.createElement('textarea');
             input.value = text;
-            input.style.position = 'fixed'; // Avoid scrolling to bottom
-            input.style.opacity = '0';
+            input.style.position = 'fixed'; input.style.opacity = '0';
             document.body.appendChild(input);
             input.select();
             try {
@@ -478,9 +450,7 @@
                 const original = button.innerText;
                 button.innerText = "Copied to Clipboard!";
                 setTimeout(() => button.innerText = original, 2000);
-            } catch (err) {
-                console.error('Copy failed', err);
-            }
+            } catch (err) { console.error('Copy failed', err); }
             document.body.removeChild(input);
         }
 
@@ -492,7 +462,7 @@
                 const scores = [];
                 snapshot.forEach(doc => scores.push(doc.data()));
                 scores.sort((a, b) => b.level - a.level || a.timestamp - b.timestamp);
-                globalScores = scores.slice(0, 10);
+                globalScores = scores;
                 updateLeaderboardUI();
             }, (err) => {
                 loadingSpinner.style.display = 'none';
@@ -507,9 +477,16 @@
         function updateLeaderboardUI() {
             if (globalScores.length === 0) {
                 leaderboardList.innerHTML = `<p class="text-slate-500 italic">No global runs yet...</p>`;
+                seeMoreBtn.classList.add('hidden');
                 return;
             }
-            leaderboardList.innerHTML = globalScores.map((s, i) => `
+            
+            const displayScores = globalScores.slice(0, leaderboardDisplayLimit);
+            const titleSpan = document.querySelector('#leaderboard-section h2 span:first-child');
+            const h2 = document.querySelector('#leaderboard-section h2');
+            h2.innerHTML = `Global Top ${leaderboardDisplayLimit} <span id="loading-spinner" class="text-[10px] normal-case font-normal text-slate-500 animate-pulse" style="display:none">Syncing...</span>`;
+
+            leaderboardList.innerHTML = displayScores.map((s, i) => `
                 <div class="flex justify-between items-center py-2 border-b border-slate-800 last:border-0">
                     <div class="flex items-center gap-3 overflow-hidden">
                         <span class="${i < 3 ? 'text-cyan-400 font-black' : 'text-slate-600'}">#${i + 1}</span>
@@ -518,6 +495,18 @@
                     <span class="text-cyan-500 font-bold ml-2">Lvl ${s.level}</span>
                 </div>
             `).join('');
+
+            // Show "See More" only if there are more than 10 scores and we are currently at 10
+            if (globalScores.length > 10 && leaderboardDisplayLimit === 10) {
+                seeMoreBtn.classList.remove('hidden');
+            } else {
+                seeMoreBtn.classList.add('hidden');
+            }
+        }
+
+        window.expandLeaderboard = function() {
+            leaderboardDisplayLimit = 50;
+            updateLeaderboardUI();
         }
 
         function movePlayer(dx, dy) {
@@ -538,17 +527,10 @@
             if (['d', 'arrowright'].includes(key)) movePlayer(1, 0);
         });
 
-        const resizeObserver = new ResizeObserver(() => {
-            initCanvas();
-            draw();
-        });
+        const resizeObserver = new ResizeObserver(() => { initCanvas(); draw(); });
         resizeObserver.observe(canvasContainer);
 
-        window.onload = () => {
-            initCanvas();
-            generateMaze(FIXED_MAZE_SIZE);
-            draw();
-        };
+        window.onload = () => { initCanvas(); generateMaze(FIXED_MAZE_SIZE); draw(); };
     </script>
 </body>
 </html>
