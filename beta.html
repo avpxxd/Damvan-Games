@@ -75,12 +75,12 @@
         
         @media (max-width: 640px) {
             .boxed-display {
-                transform: scale(0.85);
+                transform: scale(0.8);
                 transform-origin: bottom;
             }
             #timer-container {
-                font-size: 2rem;
-                min-width: 6.5rem;
+                font-size: 1.75rem;
+                min-width: 6rem;
             }
         }
 
@@ -100,9 +100,7 @@
         }
 
         .mode-btn {
-            padding: 8px 12px;
             border-radius: 8px;
-            font-size: 11px;
             font-weight: 900;
             text-transform: uppercase;
             letter-spacing: 0.1em;
@@ -137,11 +135,11 @@
 </head>
 <body class="flex flex-col items-center justify-center min-h-screen p-4 bg-slate-950">
 
-    <div class="w-full max-w-6xl flex flex-col md:flex-row items-center md:items-start justify-center gap-8 md:gap-12">
+    <div class="w-full max-w-6xl flex flex-col md:flex-row items-center md:items-start justify-center gap-6 md:gap-12">
         
-        <aside id="leaderboard-section" class="order-2 md:order-1 w-full md:w-72 lg:w-80 flex flex-col gap-6">
+        <aside id="leaderboard-section" class="order-2 md:order-1 w-full md:w-72 lg:w-80 flex flex-col gap-4">
             <div class="text-center md:text-left">
-                <h1 class="text-4xl lg:text-5xl font-black tracking-tighter neon-text uppercase italic leading-none mb-2">Maze Speedrun</h1>
+                <h1 class="text-4xl lg:text-5xl font-black tracking-tighter neon-text uppercase italic leading-none mb-1">Maze Speedrun</h1>
                 <p class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.3em]">Precision & Pace</p>
             </div>
 
@@ -157,8 +155,8 @@
                     <button id="tab-personal" class="tab-btn">Your Top</button>
                 </div>
 
-                <div id="leaderboard-list" class="space-y-2 font-mono text-sm max-h-[300px] md:max-h-[500px] overflow-y-auto pr-2">
-                    <p class="text-slate-500 italic">Connecting...</p>
+                <div id="leaderboard-list" class="space-y-2 font-mono text-sm max-h-[250px] md:max-h-[450px] overflow-y-auto pr-2">
+                    <p class="text-slate-500 italic text-center">Connecting...</p>
                 </div>
                 
                 <button id="see-more-btn" class="hidden w-full mt-4 py-2 text-[10px] uppercase font-bold text-cyan-500/50 hover:text-cyan-400 border border-cyan-500/20 hover:border-cyan-500/50 rounded transition-all tracking-widest">
@@ -170,7 +168,7 @@
         </aside>
 
         <main id="game-section" class="order-1 md:order-2 flex flex-col items-center w-full max-w-xl">
-            <div id="game-ui" class="w-full mb-6 flex flex-row justify-between items-end gap-2 px-1">
+            <div id="game-ui" class="w-full mb-4 flex flex-row justify-between items-end gap-2 px-1">
                 <div class="flex flex-col items-start gap-1">
                     <span class="text-slate-500 text-[10px] uppercase font-bold tracking-[0.2em] ml-1">Level</span>
                     <div class="boxed-display">
@@ -197,27 +195,27 @@
             <div id="canvas-container" class="relative w-full aspect-square bg-slate-900 rounded-xl p-1 md:p-2 border-2 border-slate-700 neon-border flex items-center justify-center overflow-hidden">
                 <canvas id="mazeCanvas"></canvas>
                 
-                <div id="overlay" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center rounded-lg z-10 p-6">
+                <div id="overlay" class="absolute inset-0 bg-slate-900/95 flex flex-col items-center justify-center rounded-lg z-10 p-4">
                     <div id="start-screen" class="text-center w-full">
-                        <h2 class="text-4xl font-black mb-6 text-cyan-400 italic uppercase">Select Mode</h2>
+                        <h2 class="text-3xl sm:text-4xl font-black mb-4 text-cyan-400 italic uppercase">Select Mode</h2>
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 w-full max-w-sm mx-auto">
-                            <button id="mode-classic" class="mode-btn active p-6 flex flex-col items-center gap-2">
-                                <span class="text-lg">Classic</span>
-                                <span class="text-[9px] opacity-60 font-normal">Infinite Random Mazes</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6 w-full max-w-sm mx-auto">
+                            <button id="mode-classic" class="mode-btn active p-3 sm:p-6 flex flex-col items-center gap-1 sm:gap-2">
+                                <span class="text-base sm:text-lg">Classic</span>
+                                <span class="text-[8px] sm:text-[9px] opacity-60 font-normal">Infinite Random Mazes</span>
                             </button>
-                            <button id="mode-daily" class="mode-btn p-6 flex flex-col items-center gap-2 relative">
-                                <span class="text-lg">Daily Race</span>
-                                <span id="daily-subtext" class="text-[9px] opacity-60 font-normal">Same for Everyone</span>
+                            <button id="mode-daily" class="mode-btn p-3 sm:p-6 flex flex-col items-center gap-1 sm:gap-2 relative">
+                                <span class="text-base sm:text-lg">Daily Race</span>
+                                <span id="daily-subtext" class="text-[8px] sm:text-[9px] opacity-60 font-normal">Same for Everyone</span>
                                 <div id="daily-countdown" class="text-[8px] mt-1 text-cyan-400 font-mono hidden">--:--:--</div>
                             </button>
                         </div>
 
-                        <button id="start-btn" class="px-12 py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-full transition-all transform hover:scale-105 active:scale-95 uppercase shadow-lg shadow-cyan-500/20">Enter Maze</button>
+                        <button id="start-btn" class="px-10 py-3 sm:px-12 sm:py-4 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black rounded-full transition-all transform hover:scale-105 active:scale-95 uppercase shadow-lg shadow-cyan-500/20">Enter Maze</button>
                     </div>
 
                     <div id="gameover-screen" class="hidden text-center w-full max-w-xs">
-                        <h2 class="text-5xl font-black mb-2 text-rose-500 italic">OUT OF TIME</h2>
+                        <h2 class="text-4xl sm:text-5xl font-black mb-2 text-rose-500 italic">OUT OF TIME</h2>
                         <p class="text-slate-400 mb-6">You reached Level <span id="final-level" class="text-white font-bold text-xl">0</span></p>
                         
                         <div id="score-submission" class="mb-4 space-y-3">
@@ -244,7 +242,7 @@
             </div>
 
             <!-- Mobile Controls -->
-            <div id="mobile-controls" class="grid grid-cols-3 gap-3 mt-8 md:hidden">
+            <div id="mobile-controls" class="grid grid-cols-3 gap-3 mt-6 md:hidden">
                 <div></div>
                 <button id="m-up" class="control-btn w-16 h-16 bg-slate-800 rounded-xl flex items-center justify-center border-b-4 border-slate-950 active:translate-y-1 active:border-b-0">
                     <svg class="w-8 h-8 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 15l7-7 7 7"></path></svg>
@@ -302,6 +300,7 @@
         let sessionStats = { totalMoves: 0, startTime: 0, realEndTime: 0, keystrokeBuffer: [], isFlagged: false };
 
         const goalAudio = new Audio('goal.mp3'), warningAudio = new Audio('1sec.mp3');
+        warningAudio.loop = true; // Make clock sound loopable
         let playedWarningSound = false;
 
         function escapeHTML(str) { const div = document.createElement('div'); div.textContent = str; return div.innerHTML; }
@@ -312,8 +311,15 @@
         }
         let currentPrng = Math.random;
 
+        function stopWarningSFX() {
+            warningAudio.pause();
+            warningAudio.currentTime = 0;
+            playedWarningSound = false;
+        }
+
         function triggerBotAlert() {
             gameActive = false;
+            stopWarningSFX();
             document.getElementById('overlay').classList.remove('hidden');
             document.getElementById('start-screen').classList.add('hidden');
             document.getElementById('gameover-screen').classList.add('hidden');
@@ -344,7 +350,12 @@
             const canvasEl = document.getElementById('mazeCanvas');
             const container = document.getElementById('canvas-container');
             if (!canvasEl || !container) return;
-            const size = Math.max(200, Math.min(container.clientWidth - 16, 500));
+            
+            // Scalability fix: Consider viewport height to ensure game stays visible on mobile/small laptops
+            const maxWidth = container.clientWidth - 16;
+            const maxHeight = window.innerHeight - 320; // Reserve space for labels and controls
+            const size = Math.max(200, Math.min(maxWidth, maxHeight, 500));
+            
             canvasEl.width = size; canvasEl.height = size;
             cellSize = canvasEl.width / mazeSize;
         }
@@ -424,15 +435,23 @@
             if (dx > 0.001 || dy > 0.001) {
                 player.trail.unshift({x: player.visualX, y: player.visualY}); if (player.trail.length > 10) player.trail.pop();
             } else if (player.trail.length > 0) player.trail.pop();
+            
             timeRemaining -= delta;
             if (timeRemaining <= 0) { timeRemaining = 0; endGame(); }
+            
             const tCont = document.getElementById('timer-container');
             if (tCont) {
                 tCont.innerText = timeRemaining.toFixed(2);
-                if (timeRemaining < 3) {
+                if (timeRemaining < 3 && timeRemaining > 0) {
                     tCont.style.color = "#ef4444";
-                    if (!playedWarningSound) { warningAudio.play().catch(()=>{}); playedWarningSound = true; }
-                } else { tCont.style.color = "#22d3ee"; }
+                    if (!playedWarningSound && gameActive) { 
+                        warningAudio.play().catch(()=>{}); 
+                        playedWarningSound = true; 
+                    }
+                } else { 
+                    tCont.style.color = "#22d3ee";
+                    if (playedWarningSound) stopWarningSFX();
+                }
             }
             draw(); requestAnimationFrame(gameLoop);
         }
@@ -449,7 +468,7 @@
 
         function endGame() {
             gameActive = false; sessionStats.realEndTime = Date.now();
-            warningAudio.pause(); warningAudio.currentTime = 0;
+            stopWarningSFX();
             const fl = document.getElementById('final-level'); if (fl) fl.innerText = level;
             const ov = document.getElementById('overlay'); if (ov) ov.classList.remove('hidden');
             const gs = document.getElementById('gameover-screen'); if (gs) gs.classList.remove('hidden');
@@ -463,6 +482,7 @@
             if ((dx === 1 && cell.walls[1]) || (dx === -1 && cell.walls[3]) || (dy === 1 && cell.walls[2]) || (dy === -1 && cell.walls[0])) return;
             player.x += dx; player.y += dy; sessionStats.totalMoves++;
             if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
+                stopWarningSFX(); // Stop warning sound when goal is reached
                 goalAudio.currentTime = 0; goalAudio.play().catch(()=>{});
                 level++; timeLimit = Math.max(1.0, 10.0 - ((level-1) * 0.1));
                 timeRemaining = timeLimit; updateCounterUI(level);
@@ -524,9 +544,9 @@
         const modeDailyBtn = document.getElementById('mode-daily');
         if (modeDailyBtn) modeDailyBtn.addEventListener('click', () => selectMode('daily'));
         const resetBtn = document.getElementById('reset-btn');
-        if (resetBtn) resetBtn.addEventListener('click', () => location.reload());
+        if (resetBtn) resetBtn.addEventListener('click', () => { stopWarningSFX(); location.reload(); });
         const reloadBtn = document.getElementById('reload-btn');
-        if (reloadBtn) reloadBtn.addEventListener('click', () => location.reload());
+        if (reloadBtn) reloadBtn.addEventListener('click', () => { stopWarningSFX(); location.reload(); });
         
         const tabAllBtn = document.getElementById('tab-all');
         if (tabAllBtn) tabAllBtn.addEventListener('click', () => setTab('all'));
@@ -552,7 +572,8 @@
                 if (id === 'm-up') move(0,-1); if (id === 'm-down') move(0,1);
                 if (id === 'm-left') move(-1,0); if (id === 'm-right') move(1,0);
             };
-            btn.addEventListener('mousedown', handler); btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
+            btn.addEventListener('mousedown', (e) => { e.preventDefault(); handler(); }); 
+            btn.addEventListener('touchstart', (e) => { e.preventDefault(); handler(); });
         });
 
         const resizeObs = new ResizeObserver(() => window.requestAnimationFrame(() => { initCanvas(); draw(); }));
@@ -615,12 +636,28 @@
             gameMode = m;
             const mc = document.getElementById('mode-classic'); if (mc) mc.classList.toggle('active', m === 'classic');
             const md = document.getElementById('mode-daily'); if (md) md.classList.toggle('active', m === 'daily');
+            
+            const dc = document.getElementById('daily-countdown');
+            if (dc && hasPlayedDailyToday) {
+                dc.classList.toggle('hidden', m === 'daily');
+            }
         }
+
+        setInterval(() => {
+            const now = new Date(), tomorrow = new Date();
+            tomorrow.setUTCHours(24, 0, 0, 0);
+            const diff = tomorrow - now;
+            const h = Math.floor(diff / 3600000).toString().padStart(2, '0');
+            const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2, '0');
+            const s = Math.floor((diff % 60000) / 1000).toString().padStart(2, '0');
+            const countdownEl = document.getElementById('daily-countdown');
+            if (countdownEl) countdownEl.innerText = `NEXT RACE: ${h}:${m}:${s}`;
+        }, 1000);
 
         onAuthStateChanged(auth, u => {
             currentUser = u;
             if (u) { 
-                const as = document.getElementById('auth-status'); if (as) as.innerText = "Connected To Leaderboard Services"; 
+                const as = document.getElementById('auth-status'); if (as) as.innerText = "Connected Globally"; 
                 setupListeners(); 
                 checkDailyStatus();
                 setupWatchdog(); 
