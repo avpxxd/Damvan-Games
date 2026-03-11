@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.5.5</title>
+    <title>System Breach | Terminal v3.6.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -135,13 +135,34 @@
             margin-bottom: 4px;
         }
         .stat-value {
-            font-size: 22px;
+            font-size: 20px;
             font-weight: 900;
             text-align: right;
             line-height: 1;
             font-variant-numeric: tabular-nums;
-            min-width: 80px;
         }
+
+        .leaderboard-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 8px;
+            border-bottom: 1px solid rgba(16, 185, 129, 0.1);
+            font-size: 11px;
+        }
+        .leaderboard-item:last-child { border: 0; }
+        .rank-badge {
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(16, 185, 129, 0.2);
+            font-size: 9px;
+            font-weight: 900;
+            margin-right: 8px;
+        }
+        .rank-1 { color: #fbbf24; background: rgba(251, 191, 36, 0.2); }
     </style>
 </head>
 <body class="">
@@ -157,7 +178,7 @@
                 <h2 class="text-2xl font-black italic uppercase text-emerald-500 glitch-text flex items-center justify-center md:justify-start gap-3">
                     <i data-lucide="shield-check"></i> Identity Verification
                 </h2>
-                <p class="text-[10px] opacity-60 font-bold uppercase tracking-widest">Awaiting Agent Credentials...</p>
+                <p class="text-[10px] opacity-60 font-bold uppercase tracking-widest">Establish Neural Agent Link...</p>
             </div>
 
             <div class="space-y-4">
@@ -174,7 +195,7 @@
             </div>
 
             <div class="pt-4 border-t border-emerald-900/20 text-[8px] opacity-30 text-center uppercase tracking-widest" id="node-id-display">
-                Node_ID: raid-vault-e67f7 // Advanced Sanitization Enabled
+                Node_ID: raid-vault-e67f7 // Interface Fix v3.6.4
             </div>
         </div>
     </div>
@@ -185,41 +206,53 @@
             <i data-lucide="shield-alert" class="text-emerald-500"></i>
             <div>
                 <h1 class="text-xl font-black italic tracking-tighter uppercase leading-none">Global Heist Protocol</h1>
-                <div class="text-[10px] opacity-40 font-bold mt-1" id="ui-date">AUTH_INIT...</div>
+                <div class="text-[10px] opacity-40 font-bold mt-1 uppercase" id="ui-date">AUTH_INIT...</div>
             </div>
         </div>
 
-        <div class="flex gap-3 items-stretch h-[52px]">
-            <div class="stat-box min-w-[130px]">
+        <div class="flex gap-2 items-stretch h-[52px]">
+            <!-- Credits Block -->
+            <div class="stat-box min-w-[100px]">
                 <div class="stat-label">Credits</div>
-                <div class="stat-value" id="ui-credits">--</div>
+                <div class="stat-value text-emerald-500" id="ui-credits">--</div>
             </div>
+            <!-- Data Block -->
             <div class="stat-box min-w-[110px]">
+                <div class="stat-label">Extracted</div>
+                <div class="stat-value text-blue-400"><span id="ui-data-gb">--</span><span class="text-[10px] ml-1">GB</span></div>
+            </div>
+            <!-- Refill Block -->
+            <div class="stat-box min-w-[90px]">
                 <div class="stat-label">Refill</div>
-                <div class="stat-value" id="ui-timer">--:--</div>
+                <div class="stat-value text-zinc-500" id="ui-timer">--:--</div>
             </div>
         </div>
     </header>
 
     <main class="flex-1 overflow-hidden p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Sidebar -->
-        <div class="flex flex-col gap-6">
+        <!-- Sidebar: Rankings & Intel -->
+        <div class="flex flex-col gap-6 overflow-hidden">
+            <!-- Intel Summary: Previous Breacher -->
             <div class="terminal-border p-4 rounded-lg bg-emerald-950/5">
-                <h3 class="text-xs font-black uppercase mb-4 flex items-center gap-2">
+                <h3 class="text-xs font-black uppercase mb-4 flex items-center gap-2 text-emerald-500">
                     <i data-lucide="trophy" size="14"></i> Intel Summary
                 </h3>
                 <div id="ui-winner" class="text-sm space-y-2">
-                    <p class="opacity-30 italic text-xs">Awaiting breach data...</p>
+                    <p class="opacity-30 italic text-xs text-center py-4">Scanning archives...</p>
                 </div>
             </div>
 
-            <div class="terminal-border p-4 rounded-lg bg-emerald-950/5 flex-1 hidden md:block">
-                <h3 class="text-xs font-black uppercase mb-4 border-b border-emerald-900 pb-2">Operational Guidelines</h3>
-                <ul class="text-[10px] space-y-3 opacity-60 font-bold uppercase">
-                    <li>- 1 Credit Earned every 2 mins</li>
-                    <li>- 5s Cooldown on ALL attacks</li>
-                    <li>- Log in daily for a 10 Credit bonus</li>
-                </ul>
+            <!-- Global Rankings -->
+            <div class="terminal-border p-4 rounded-lg bg-emerald-950/5 flex flex-col flex-1 overflow-hidden">
+                <h3 class="text-xs font-black uppercase mb-4 flex items-center gap-2 text-blue-400">
+                    <i data-lucide="bar-chart-3" size="14"></i> Global Rankings
+                </h3>
+                <div id="leaderboard-container" class="flex-1 overflow-y-auto space-y-1 pr-1 custom-scroll">
+                    <p class="text-[10px] opacity-30 italic text-center py-10">Updating rankings...</p>
+                </div>
+                <div class="mt-4 pt-2 border-t border-emerald-900/30 text-[8px] opacity-30 text-center uppercase">
+                    Sort: Extracted Data (GB)
+                </div>
             </div>
         </div>
 
@@ -229,7 +262,7 @@
                 <div id="lock-indicators" class="flex justify-between mb-12"></div>
                 <div id="hp-section" class="space-y-4">
                     <div class="flex justify-between items-end px-1">
-                        <span id="lock-label" class="text-lg font-black italic uppercase">Target: Lock_1</span>
+                        <span id="lock-label" class="text-lg font-black italic uppercase text-white">Target: Lock_1</span>
                         <span id="hp-label" class="text-xs font-bold opacity-60">-- / -- HP</span>
                     </div>
                     <progress id="hp-bar" value="0" max="100"></progress>
@@ -253,8 +286,8 @@
             <div class="text-[10px] font-black uppercase border-b border-emerald-900 pb-2 mb-4 flex items-center gap-2 text-emerald-500">
                 <i data-lucide="globe" size="12"></i> Global_Activity_Feed
             </div>
-            <div id="log-container" class="flex-1 flex flex-col justify-end overflow-hidden space-y-1 font-mono">
-                <!-- Culled data feed -->
+            <div id="log-container" class="flex-1 flex flex-col justify-end overflow-hidden space-y-1">
+                <!-- Data culled at top -->
             </div>
             <div class="mt-4 pt-2 border-t border-emerald-900/30 flex justify-between items-center text-[9px] font-bold opacity-30">
                 <span id="agent-id">ID: AUTH_PENDING</span>
@@ -266,7 +299,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Configuration
         const firebaseConfig = {
@@ -280,17 +313,43 @@
         };
         
         const appId = "raid-vault-e67f7"; 
-        const POINT_TICK_MS = 1 * 60 * 1000; 
+        const POINT_TICK_MS = 2 * 60 * 1000; 
         const VAULT_COOLDOWN_MS = 30 * 60 * 1000; 
-        const STARTING_CREDITS = 20;
+        const STARTING_CREDITS = 10;
+
+        // --- DOM Elements Reference ---
+        const el = {
+            credits: document.getElementById('ui-credits'),
+            timer: document.getElementById('ui-timer'),
+            date: document.getElementById('ui-date'),
+            hpBar: document.getElementById('hp-bar'),
+            hpLabel: document.getElementById('hp-label'),
+            lockLabel: document.getElementById('lock-label'),
+            logs: document.getElementById('log-container'),
+            actions: document.getElementById('action-grid'),
+            indicators: document.getElementById('lock-indicators'),
+            hpSection: document.getElementById('hp-section'),
+            crackedMsg: document.getElementById('cracked-message'),
+            resetCountdown: document.getElementById('reset-countdown'),
+            winner: document.getElementById('ui-winner'),
+            agentId: document.getElementById('agent-id'),
+            body: document.body,
+            flash: document.getElementById('nuke-flash'),
+            nameModal: document.getElementById('identity-modal'),
+            nameInput: document.getElementById('name-input'),
+            nameSubmit: document.getElementById('name-submit'),
+            nameError: document.getElementById('name-error'),
+            dataGB: document.getElementById('ui-data-gb'),
+            leaderboard: document.getElementById('leaderboard-container')
+        };
 
         const ATTACKS = [
-            { id: 'guess', name: 'Guess', cost: 0, cooldown: 5, dmg: [1, 5], icon: 'target' },
-            { id: 'hit', name: 'Hit', cost: 2, cooldown: 5, dmg: [10, 20], icon: 'zap' },
-            { id: 'drill', name: 'Drill', cost: 5, cooldown: 5, dmg: [20, 50], icon: 'cpu' },
-            { id: 'hack', name: 'Hack', cost: 15, cooldown: 5, dmg: [50, 150], icon: 'terminal' },
-            { id: 'bomb', name: 'Bomb', cost: 50, cooldown: 5, dmg: [100, 500], icon: 'bomb' },
-            { id: 'nuke', name: 'Nuke', cost: 100, cooldown: 5, dmg: [1000, 1000], icon: 'radiation' },
+            { id: 'guess', name: 'Guess', cost: 0, cooldown: 5, dmg: [1, 5], icon: 'target', data: 0.1 },
+            { id: 'hit', name: 'Hit', cost: 2, cooldown: 5, dmg: [10, 20], icon: 'zap', data: 0.5 },
+            { id: 'drill', name: 'Drill', cost: 5, cooldown: 5, dmg: [20, 50], icon: 'cpu', data: 1 },
+            { id: 'hack', name: 'Hack', cost: 15, cooldown: 5, dmg: [50, 150], icon: 'terminal', data: 5 },
+            { id: 'bomb', name: 'Bomb', cost: 50, cooldown: 5, dmg: [100, 500], icon: 'bomb', data: 20 },
+            { id: 'nuke', name: 'Nuke', cost: 100, cooldown: 5, dmg: [1000, 1000], icon: 'radiation', data: 100 },
         ];
 
         const HeistLogic = (() => {
@@ -307,6 +366,7 @@
             };
 
             function createActionButtons() {
+                if (!el.actions) return;
                 el.actions.innerHTML = ATTACKS.map(a => `
                     <button class="btn-action p-3 rounded flex flex-col items-center gap-1 group" id="btn-${a.id}">
                         <i data-lucide="${a.icon}" size="16"></i>
@@ -317,16 +377,14 @@
                 
                 ATTACKS.forEach(a => {
                     const btn = document.getElementById(`btn-${a.id}`);
-                    btn.onclick = () => executeAttack(a);
+                    if (btn) btn.onclick = () => executeAttack(a);
                 });
                 lucide.createIcons();
             }
 
             function sanitizeHandle(handle) {
                 let normalized = handle.toLowerCase();
-                Object.keys(LEET_TRANSFORM).forEach(key => {
-                    normalized = normalized.split(key).join(LEET_TRANSFORM[key]);
-                });
+                Object.keys(LEET_TRANSFORM).forEach(key => { normalized = normalized.split(key).join(LEET_TRANSFORM[key]); });
                 return normalized.replace(/[^a-z]/g, '');
             }
 
@@ -357,13 +415,21 @@
                     await runTransaction(db, async (tx) => {
                         const hSnap = await tx.get(heistRef);
                         const pSnap = await tx.get(profRef);
+                        if (!hSnap.exists() || !pSnap.exists()) return;
+
                         const hData = hSnap.data();
                         const pData = pSnap.data();
                         
-                        if (pData.points < atk.cost) throw "DENIED: INSUFFICIENT_CREDITS";
+                        if (pData.points < atk.cost) throw "INSUFFICIENT_CREDITS";
                         if (hData.isCracked) return;
 
                         const lIdx = hData.currentLock;
+                        if (!hData.participants) hData.participants = {};
+                        if (!hData.participants[lIdx]) hData.participants[lIdx] = [];
+                        if (!hData.participants[lIdx].includes(state.user.uid)) {
+                            hData.participants[lIdx].push(state.user.uid);
+                        }
+
                         const lData = hData.locks[lIdx];
                         let newHp = Math.max(0, lData.hp - dmg);
                         hData.locks[lIdx].hp = newHp;
@@ -379,30 +445,26 @@
                         }
 
                         tx.update(heistRef, hData);
-                        tx.update(profRef, { points: increment(-atk.cost) });
+                        tx.update(profRef, { 
+                            points: increment(-atk.cost),
+                            dataGB: increment(atk.data) 
+                        });
                     });
 
                     cooldowns[atk.id] = Date.now();
                     refreshUI();
                     postGlobalActivity(`Agent ${state.profile.displayName} used ${atk.name}: -${dmg} HP`);
 
-                    if (atk.id === 'nuke') {
-                        el.flash.style.opacity = '1';
-                        setTimeout(() => el.flash.style.opacity = '0', 300);
-                    }
-                    if (atk.id === 'bomb' || atk.id === 'nuke') {
-                        el.body.classList.add('shake-screen');
-                        setTimeout(() => el.body.classList.remove('shake-screen'), 500);
-                    }
-                } catch (e) {
-                    console.error("Action denied");
-                }
+                    if (atk.id === 'nuke') { el.flash.style.opacity = '1'; setTimeout(() => el.flash.style.opacity = '0', 300); }
+                    if (atk.id === 'bomb' || atk.id === 'nuke') { el.body.classList.add('shake-screen'); setTimeout(() => el.body.classList.remove('shake-screen'), 500); }
+                } catch (e) { console.error("Action denied"); }
             }
 
             function refreshUI() {
                 if (!state.profile) return;
-                el.credits.innerText = state.profile.points;
-                el.date.innerText = `Node_Secure // ${state.heist?.isCracked ? 'BREACHED' : 'READY'}`;
+                if (el.credits) el.credits.innerText = state.profile.points;
+                if (el.dataGB) el.dataGB.innerText = (state.profile.dataGB || 0).toFixed(1);
+                if (el.date) el.date.innerText = `Node_Secure // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
 
                 const now = Date.now();
                 ATTACKS.forEach(a => {
@@ -413,7 +475,7 @@
                     const onCooldown = (now - last) < (a.cooldown * 1000);
                     const disabled = state.profile.points < a.cost || state.heist?.isCracked || onCooldown;
                     btn.disabled = disabled;
-                    label.innerText = onCooldown ? 'RELOADING' : `${a.cost} CRED`;
+                    if (label) label.innerText = onCooldown ? 'RELOADING' : `${a.cost} CRED`;
                 });
             }
 
@@ -421,47 +483,109 @@
                 const h = state.heist;
                 if (!h) return;
 
-                el.indicators.innerHTML = h.locks.map((l, i) => `
-                    <div class="flex flex-col items-center">
-                        <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                            l.cracked ? 'bg-emerald-500 border-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 
-                            i === h.currentLock ? 'border-yellow-500 text-yellow-500 animate-pulse' : 'border-emerald-900 opacity-20'
-                        }">
-                            <i data-lucide="${l.cracked ? 'check' : 'lock'}" size="14"></i>
+                handleHeistRewards(h);
+
+                if (el.indicators) {
+                    el.indicators.innerHTML = h.locks.map((l, i) => `
+                        <div class="flex flex-col items-center">
+                            <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
+                                l.cracked ? 'bg-emerald-500 border-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 
+                                i === h.currentLock ? 'border-yellow-500 text-yellow-500 animate-pulse' : 'border-emerald-900 opacity-20'
+                            }">
+                                <i data-lucide="${l.cracked ? 'check' : 'lock'}" size="14"></i>
+                            </div>
+                            <span class="text-[8px] font-bold mt-1">L-${i+1}</span>
                         </div>
-                        <span class="text-[8px] font-bold mt-1">L-${i+1}</span>
-                    </div>
-                `).join('');
+                    `).join('');
+                }
 
                 if (h.isCracked) {
-                    el.hpSection.classList.add('hidden');
-                    el.crackedMsg.classList.remove('hidden');
+                    if (el.hpSection) el.hpSection.classList.add('hidden');
+                    if (el.crackedMsg) el.crackedMsg.classList.remove('hidden');
                 } else {
-                    el.hpSection.classList.remove('hidden');
-                    el.crackedMsg.classList.add('hidden');
+                    if (el.hpSection) el.hpSection.classList.remove('hidden');
+                    if (el.crackedMsg) el.crackedMsg.classList.add('hidden');
                     const current = h.locks[h.currentLock];
-                    el.hpBar.max = current.maxHp;
-                    el.hpBar.value = current.hp;
-                    el.hpLabel.innerText = `${current.hp} / ${current.maxHp} HP`;
-                    el.lockLabel.innerText = `Target: Lock_${h.currentLock + 1}`;
+                    if (el.hpBar) { el.hpBar.max = current.maxHp; el.hpBar.value = current.hp; }
+                    if (el.hpLabel) el.hpLabel.innerText = `${current.hp} / ${current.maxHp} HP`;
+                    if (el.lockLabel) el.lockLabel.innerText = `Target: Lock_${h.currentLock + 1}`;
                 }
 
-                if (h.lastWinner) {
-                    el.winner.innerHTML = `
-                        <div class="bg-emerald-500 text-black p-2 font-black uppercase text-center text-[10px] mb-2 font-bold">Previous Breach</div>
-                        <p class="text-[10px] font-bold uppercase"><span class="opacity-40">Agent:</span> ${h.lastWinner.name}</p>
-                        <p class="text-[10px] font-bold uppercase"><span class="opacity-40">Method:</span> ${h.lastWinner.method}</p>
-                    `;
+                if (el.winner) {
+                    if (h.lastWinner) {
+                        el.winner.innerHTML = `
+                            <div class="bg-emerald-500 text-black p-2 font-black uppercase text-center text-[10px] mb-2 font-bold">Latest Breach</div>
+                            <div class="space-y-1 px-1">
+                                <p class="text-[11px] font-bold uppercase flex justify-between">
+                                    <span class="opacity-40">Agent:</span> 
+                                    <span class="text-white">${h.lastWinner.name}</span>
+                                </p>
+                                <p class="text-[11px] font-bold uppercase flex justify-between">
+                                    <span class="opacity-40">Method:</span> 
+                                    <span class="text-emerald-400">${h.lastWinner.method}</span>
+                                </p>
+                            </div>
+                        `;
+                    } else {
+                        el.winner.innerHTML = `<p class="opacity-20 italic text-[10px] text-center py-2">No archive data found</p>`;
+                    }
                 }
+                
                 lucide.createIcons();
                 refreshUI();
             }
 
+            async function handleHeistRewards(h) {
+                if (!state.user || !state.profile) return;
+                let rewardAdded = false;
+                let currentPoints = state.profile.dataGB || 0;
+
+                h.locks.forEach((lock, idx) => {
+                    if (lock.cracked && h.participants?.[idx]?.includes(state.user.uid)) {
+                        const rewardKey = `lock_v3_${h.breachTime || 0}_${idx}`;
+                        if (!state.profile.rewardLog?.includes(rewardKey)) {
+                            currentPoints += 30;
+                            if (!state.profile.rewardLog) state.profile.rewardLog = [];
+                            state.profile.rewardLog.push(rewardKey);
+                            rewardAdded = true;
+                        }
+                    }
+                });
+
+                if (h.isCracked && h.breachTime > 0) {
+                    const breachKey = `breach_v3_${h.breachTime}`;
+                    if (!state.profile.rewardLog?.includes(breachKey)) {
+                        currentPoints += 50;
+                        if (!state.profile.rewardLog) state.profile.rewardLog = [];
+                        state.profile.rewardLog.push(breachKey);
+                        rewardAdded = true;
+                    }
+                }
+
+                if (rewardAdded) {
+                    const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
+                    const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
+                    await updateDoc(ref, { dataGB: currentPoints, rewardLog: state.profile.rewardLog });
+                    await setDoc(pubRef, { displayName: state.profile.displayName, dataGB: currentPoints }, { merge: true });
+                }
+            }
+
             function renderGlobalLogs(logs) {
+                if (!el.logs) return;
                 const recentLogs = logs.slice(-30);
-                el.logs.innerHTML = recentLogs.map(log => `
-                    <div class="log-entry">
-                        <span class="opacity-30">[${new Date(log.time).toLocaleTimeString([], {hour12:false})}]</span> ${log.msg}
+                el.logs.innerHTML = recentLogs.map(log => `<div class="log-entry"><span class="opacity-30">[${new Date(log.time).toLocaleTimeString([], {hour12:false})}]</span> ${log.msg}</div>`).join('');
+            }
+
+            function renderLeaderboard(members) {
+                if (!el.leaderboard) return;
+                const sorted = members.sort((a, b) => (b.dataGB || 0) - (a.dataGB || 0)).slice(0, 20);
+                el.leaderboard.innerHTML = sorted.map((m, i) => `
+                    <div class="leaderboard-item">
+                        <div class="flex items-center">
+                            <span class="rank-badge ${i === 0 ? 'rank-1' : ''}">${i + 1}</span>
+                            <span class="font-bold opacity-80">${(m.displayName || 'Anon').toUpperCase()}</span>
+                        </div>
+                        <span class="text-blue-400 font-black">${(m.dataGB || 0).toFixed(1)}GB</span>
                     </div>
                 `).join('');
             }
@@ -471,7 +595,7 @@
                     const hp = Math.floor(Math.random() * 501) + 500;
                     return { hp, maxHp: hp, cracked: false };
                 });
-                await setDoc(ref, { locks, currentLock: 0, isCracked: false, breachTime: 0, lastWinner: state.heist?.lastWinner || null });
+                await setDoc(ref, { locks, currentLock: 0, isCracked: false, breachTime: 0, participants: {}, lastWinner: state.heist?.lastWinner || null });
             }
 
             return {
@@ -484,23 +608,18 @@
                             onSnapshot(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), (snap) => {
                                 if (snap.exists()) {
                                     let data = snap.data();
-                                    if (!data.displayName) el.nameModal.classList.remove('hidden');
-                                    else {
-                                        el.nameModal.classList.add('hidden');
-                                        el.agentId.innerText = `ID: ${data.displayName.toUpperCase()}`;
+                                    if (!data.displayName) {
+                                        if (el.nameModal) el.nameModal.classList.remove('hidden');
+                                    } else {
+                                        if (el.nameModal) el.nameModal.classList.add('hidden');
+                                        if (el.agentId) el.agentId.innerText = `ID: ${data.displayName.toUpperCase()}`;
                                     }
                                     state.profile = data;
                                     refreshUI();
                                 } else {
-                                    setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), { 
-                                        points: STARTING_CREDITS, 
-                                        lastTick: Date.now(), 
-                                        lastDaily: '', 
-                                        displayName: '' 
-                                    });
+                                    setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), { points: STARTING_CREDITS, dataGB: 0, rewardLog: [], lastTick: Date.now(), displayName: '' });
                                 }
                             });
-
                             onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'), (snap) => {
                                 if (snap.exists()) {
                                     const data = snap.data();
@@ -508,18 +627,16 @@
                                         updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'), { breachTime: Date.now() });
                                     } else if (data.isCracked && Date.now() > (data.breachTime + VAULT_COOLDOWN_MS)) {
                                         resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
-                                    } else {
-                                        state.heist = data;
-                                        renderHeist();
-                                    }
-                                } else {
-                                    resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
-                                }
-                            });
-
+                                    } else { state.heist = data; renderHeist(); }
+                                } else { resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global')); }
+                            }, (err) => console.error("Heist listener failed:", err));
                             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'activity'), (snap) => {
                                 const logs = snap.docs.map(doc => doc.data()).sort((a, b) => a.time - b.time);
                                 renderGlobalLogs(logs);
+                            });
+                            onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), (snap) => {
+                                const members = snap.docs.map(doc => doc.data());
+                                renderLeaderboard(members);
                             });
                         }
                     });
@@ -527,17 +644,17 @@
                 handleNameSubmit: async () => {
                     const val = el.nameInput.value.trim();
                     if (val.length < 3) {
-                        el.nameError.innerText = "Handle Too Short";
-                        el.nameError.classList.remove('hidden');
+                        if (el.nameError) { el.nameError.innerText = "Handle Too Short"; el.nameError.classList.remove('hidden'); }
                         return;
                     }
                     if (!isHandleSecure(val)) {
-                        el.nameError.innerText = "Access Denied: Restricted Identity Pattern";
-                        el.nameError.classList.remove('hidden');
+                        if (el.nameError) { el.nameError.innerText = "Access Denied: Restricted Pattern"; el.nameError.classList.remove('hidden'); }
                         return;
                     }
                     const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
+                    const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
                     await updateDoc(ref, { displayName: val });
+                    await setDoc(pubRef, { displayName: val, dataGB: state.profile?.dataGB || 0 }, { merge: true });
                     await postGlobalActivity(`Welcome, Agent ${val}`);
                 },
                 tick: async () => {
@@ -548,29 +665,22 @@
                         if (now >= next) {
                             isUpdatingRefill = true;
                             const ticks = Math.floor((now - lastTick) / POINT_TICK_MS);
-                            const newPoints = state.profile.points + ticks;
-                            const newTick = lastTick + (ticks * POINT_TICK_MS);
                             try {
                                 const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
-                                await updateDoc(ref, { points: newPoints, lastTick: newTick });
-                            } catch(e) { console.error("Refill Sync Error"); }
-                            finally { isUpdatingRefill = false; }
+                                await updateDoc(ref, { points: state.profile.points + ticks, lastTick: lastTick + (ticks * POINT_TICK_MS) });
+                            } catch(e) { console.error("Sync Error"); } finally { isUpdatingRefill = false; }
                         } else {
                             const diff = Math.max(0, next - now);
-                            const m = Math.floor(diff / 60000);
-                            const s = Math.floor((diff % 60000) / 1000);
-                            el.timer.innerText = `${m}:${s.toString().padStart(2, '0')}`;
+                            if (el.timer) el.timer.innerText = `${Math.floor(diff / 60000)}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`;
                         }
                     }
                     if (state.heist && state.heist.isCracked && state.heist.breachTime > 0) {
                         const resetTime = state.heist.breachTime + VAULT_COOLDOWN_MS;
                         const diff = Math.max(0, resetTime - now);
-                        const m = Math.floor(diff / 60000);
-                        const s = Math.floor((diff % 60000) / 1000);
-                        el.resetCountdown.innerText = `${m}:${s.toString().padStart(2, '0')}`;
+                        if (el.resetCountdown) el.resetCountdown.innerText = `${Math.floor(diff / 60000)}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`;
                         if (diff <= 0) resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
                     } else if (state.heist && state.heist.isCracked) {
-                        el.resetCountdown.innerText = "INITIALIZING...";
+                        if (el.resetCountdown) el.resetCountdown.innerText = "INIT...";
                     }
                     refreshUI();
                 }
@@ -581,30 +691,7 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        const el = {
-            credits: document.getElementById('ui-credits'),
-            timer: document.getElementById('ui-timer'),
-            date: document.getElementById('ui-date'),
-            hpBar: document.getElementById('hp-bar'),
-            hpLabel: document.getElementById('hp-label'),
-            lockLabel: document.getElementById('lock-label'),
-            logs: document.getElementById('log-container'),
-            actions: document.getElementById('action-grid'),
-            indicators: document.getElementById('lock-indicators'),
-            hpSection: document.getElementById('hp-section'),
-            crackedMsg: document.getElementById('cracked-message'),
-            resetCountdown: document.getElementById('reset-countdown'),
-            winner: document.getElementById('ui-winner'),
-            agentId: document.getElementById('agent-id'),
-            body: document.body,
-            flash: document.getElementById('nuke-flash'),
-            nameModal: document.getElementById('identity-modal'),
-            nameInput: document.getElementById('name-input'),
-            nameSubmit: document.getElementById('name-submit'),
-            nameError: document.getElementById('name-error')
-        };
-
-        el.nameSubmit.onclick = HeistLogic.handleNameSubmit;
+        if (el.nameSubmit) el.nameSubmit.onclick = HeistLogic.handleNameSubmit;
         setInterval(HeistLogic.tick, 1000);
         HeistLogic.start();
     </script>
