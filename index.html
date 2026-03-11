@@ -245,6 +245,14 @@
 
                         <button onclick="resetGame()" class="text-slate-400 hover:text-white uppercase text-xs font-bold tracking-widest underline underline-offset-4">Skip & Try Again</button>
                     </div>
+
+                    <!-- Security Alert Popup -->
+                    <div id="security-alert" class="hidden text-center w-full max-w-xs p-8 bg-slate-900 border-2 border-rose-500 rounded-2xl shadow-2xl shadow-rose-500/20">
+                        <div class="text-5xl mb-4">🚫</div>
+                        <h2 class="text-2xl font-black mb-2 text-rose-500 uppercase">Botting Detected</h2>
+                        <p class="text-slate-400 text-sm leading-relaxed mb-6">Suspicious activity has been flagged. Automated play or manual manipulation is not allowed on this website.</p>
+                        <button onclick="location.reload()" class="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white font-bold rounded-lg transition-all">Understood</button>
+                    </div>
                 </div>
             </div>
 
@@ -291,10 +299,23 @@
         let classicScores = [];
         let dailyScores = [];
         let leaderboardUnsubscribe = null;
+        let dailyUnsubscribe = null;
         let leaderboardDisplayLimit = 10;
         let activeTab = 'all';
         let gameMode = 'classic'; 
         let hasPlayedDailyToday = false;
+
+        /**
+         * 🔒 Security / Anti-Bot State
+         */
+        let sessionStats = {
+            totalMoves: 0,
+            startTime: 0,
+            realEndTime: 0,
+            levelsCompleted: 0,
+            keystrokeBuffer: [], // To check for perfectly regular timing (bots)
+            isFlagged: false
+        };
 
         const goalAudio = new Audio('goal.mp3');
         const warningAudio = new Audio('1sec.mp3');
@@ -497,22 +518,45 @@
         }
 
         window.startGame = function() {
-            initCanvas(); level = 1; timeLimit = INITIAL_TIME_LIMIT; timeRemaining = timeLimit;
-            overlay.classList.add('hidden'); startScreen.classList.add('hidden'); gameoverScreen.classList.add('hidden');
-            generateMaze(FIXED_MAZE_SIZE); updateCounterUI(level);
-            gameActive = true; lastTimestamp = performance.now();
+            initCanvas(); 
+            level = 1; 
+            timeLimit = INITIAL_TIME_LIMIT; 
+            timeRemaining = timeLimit;
+            overlay.classList.add('hidden'); 
+            startScreen.classList.add('hidden'); 
+            gameoverScreen.classList.add('hidden');
+            
+            // 🛡️ Reset Security State
+            sessionStats = {
+                totalMoves: 0,
+                startTime: Date.now(),
+                realEndTime: 0,
+                levelsCompleted: 0,
+                keystrokeBuffer: [],
+                isFlagged: false
+            };
+
+            generateMaze(FIXED_MAZE_SIZE); 
+            updateCounterUI(level);
+            gameActive = true; 
+            lastTimestamp = performance.now();
             requestAnimationFrame(gameLoop);
         }
 
         window.resetGame = function() {
-            overlay.classList.remove('hidden'); startScreen.classList.remove('hidden'); gameoverScreen.classList.add('hidden');
-            document.getElementById('name-error').classList.add('hidden'); checkDailyStatus();
+            overlay.classList.remove('hidden'); 
+            startScreen.classList.remove('hidden'); 
+            gameoverScreen.classList.add('hidden');
+            document.getElementById('security-alert').classList.add('hidden');
+            document.getElementById('name-error').classList.add('hidden'); 
+            checkDailyStatus();
         }
 
         function nextLevel(first = false) {
             warningAudio.pause(); warningAudio.currentTime = 0; playedWarningSound = false;
             if (!first) {
                 level++;
+                sessionStats.levelsCompleted++; // 🛡️ Track completed levels
                 if (level < 110) timeLimit = Math.max(3.0, 10.0 - ((level - 1) * 0.1));
                 else if (level >= 250) timeLimit = 1.5;
                 else { let step = Math.floor((level - 110) / 10); timeLimit = 2.9 - (step * 0.1); }
@@ -549,13 +593,65 @@
         }
 
         function endGame() {
-            gameActive = false; warningAudio.pause(); warningAudio.currentTime = 0;
-            finalLevelSpan.innerText = level; overlay.classList.remove('hidden'); gameoverScreen.classList.remove('hidden');
-            document.getElementById('submit-btn').disabled = false; document.getElementById('submit-btn').innerText = "Submit Score";
+            gameActive = false; 
+            sessionStats.realEndTime = Date.now(); // 🛡️ Mark end time
+            warningAudio.pause(); warningAudio.currentTime = 0;
+            finalLevelSpan.innerText = level; 
+            overlay.classList.remove('hidden'); 
+            gameoverScreen.classList.remove('hidden');
+            document.getElementById('submit-btn').disabled = false; 
+            document.getElementById('submit-btn').innerText = "Submit Score";
+        }
+
+        /**
+         * 🛡️ Security Check Logic
+         */
+        function validateSession() {
+            const runDuration = (sessionStats.realEndTime - sessionStats.startTime) / 1000;
+            
+            // 1. Level vs Move Count (Impossible to solve levels with tiny moves)
+            // A 6x6 maze minimum solve is roughly 10 moves.
+            const minExpectedMoves = level * 6;
+            if (sessionStats.totalMoves < minExpectedMoves && level > 2) return false;
+
+            // 2. Impossible Speed
+            // Humans solve a 6x6 maze in 1.5s+ usually. Average 1s is very fast.
+            // 0.2s is impossible level-after-level.
+            const avgTimePerLevel = runDuration / level;
+            if (avgTimePerLevel < 0.25) return false;
+
+            // 3. Perfect Input Timing (Bots often use fixed intervals)
+            if (sessionStats.keystrokeBuffer.length > 20) {
+                const diffs = [];
+                for (let i = 1; i < sessionStats.keystrokeBuffer.length; i++) {
+                    diffs.push(sessionStats.keystrokeBuffer[i] - sessionStats.keystrokeBuffer[i-1]);
+                }
+                // Calculate standard deviation of input timing
+                const avg = diffs.reduce((a,b) => a+b, 0) / diffs.length;
+                const variance = diffs.reduce((a,b) => a + Math.pow(b - avg, 2), 0) / diffs.length;
+                const stdDev = Math.sqrt(variance);
+                
+                // If inputs are too perfect (low stdDev), it's likely a bot.
+                // Humans have high variance (stumbles, pauses).
+                if (stdDev < 5 && diffs.length > 30) return false; 
+            }
+
+            // 4. Manual flag
+            if (sessionStats.isFlagged) return false;
+
+            return true;
         }
 
         window.submitScore = async function() {
             if (!currentUser || !db) return;
+
+            // 🛡️ Perform Security Check
+            if (!validateSession()) {
+                gameoverScreen.classList.add('hidden');
+                document.getElementById('security-alert').classList.remove('hidden');
+                return;
+            }
+
             const name = document.getElementById('player-name').value.trim();
             const submitBtn = document.getElementById('submit-btn'), errorLabel = document.getElementById('name-error');
             if (!isNameClean(name)) { errorLabel.classList.remove('hidden'); return; }
@@ -569,7 +665,6 @@
                     uid: currentUser.uid, mode: gameMode 
                 };
 
-                // Add expiration for TTL mapping (even if billing is off, good practice)
                 if (gameMode === 'daily') {
                     const expireDate = new Date();
                     expireDate.setHours(expireDate.getHours() + 24);
@@ -653,9 +748,18 @@
 
         function movePlayer(dx, dy) {
             if (!gameActive) return;
+            
+            // 🛡️ Log input timing for bot detection
+            sessionStats.keystrokeBuffer.push(Date.now());
+            if (sessionStats.keystrokeBuffer.length > 100) sessionStats.keystrokeBuffer.shift();
+
             const cell = maze[player.y][player.x];
             if ((dx === 1 && cell.walls[1]) || (dx === -1 && cell.walls[3]) || (dy === 1 && cell.walls[2]) || (dy === -1 && cell.walls[0])) return;
-            player.x += dx; player.y += dy;
+            
+            player.x += dx; 
+            player.y += dy;
+            sessionStats.totalMoves++; // 🛡️ Track moves
+
             if (player.x === mazeSize - 1 && player.y === mazeSize - 1) {
                 warningAudio.pause(); warningAudio.currentTime = 0; goalAudio.currentTime = 0; goalAudio.play().catch(() => {}); nextLevel();
             }
@@ -670,7 +774,13 @@
             if (['d', 'arrowright'].includes(key)) movePlayer(1, 0);
         });
         const resizeObserver = new ResizeObserver(() => { window.requestAnimationFrame(() => { initCanvas(); if (maze && maze.length > 0) draw(); }); });
-        window.onload = () => { initCanvas(); generateMaze(FIXED_MAZE_SIZE); draw(); updateCounterUI(1); resizeObserver.observe(canvasContainer); };
+        window.onload = () => { 
+            initCanvas(); 
+            generateMaze(FIXED_MAZE_SIZE); 
+            draw(); 
+            updateCounterUI(1); 
+            resizeObserver.observe(canvasContainer); 
+        };
     </script>
 </body>
 </html>
