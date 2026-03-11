@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.6.4</title>
+    <title>System Breach | Terminal v3.6.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -195,7 +195,7 @@
             </div>
 
             <div class="pt-4 border-t border-emerald-900/20 text-[8px] opacity-30 text-center uppercase tracking-widest" id="node-id-display">
-                Node_ID: raid-vault-e67f7 // Interface Fix v3.6.4
+                Node_ID: raid-vault-e67f7 // Zero-Trust v3.6.6
             </div>
         </div>
     </div>
@@ -211,17 +211,14 @@
         </div>
 
         <div class="flex gap-2 items-stretch h-[52px]">
-            <!-- Credits Block -->
             <div class="stat-box min-w-[100px]">
                 <div class="stat-label">Credits</div>
                 <div class="stat-value text-emerald-500" id="ui-credits">--</div>
             </div>
-            <!-- Data Block -->
             <div class="stat-box min-w-[110px]">
                 <div class="stat-label">Extracted</div>
-                <div class="stat-value text-blue-400"><span id="ui-data-gb">--</span><span class="text-[10px] ml-1">GB</span></div>
+                <div class="stat-value text-blue-400"><span id="ui-data-gb">--</span><span class="text-[10px] ml-1 uppercase">GB</span></div>
             </div>
-            <!-- Refill Block -->
             <div class="stat-box min-w-[90px]">
                 <div class="stat-label">Refill</div>
                 <div class="stat-value text-zinc-500" id="ui-timer">--:--</div>
@@ -232,17 +229,15 @@
     <main class="flex-1 overflow-hidden p-4 md:p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         <!-- Sidebar: Rankings & Intel -->
         <div class="flex flex-col gap-6 overflow-hidden">
-            <!-- Intel Summary: Previous Breacher -->
             <div class="terminal-border p-4 rounded-lg bg-emerald-950/5">
                 <h3 class="text-xs font-black uppercase mb-4 flex items-center gap-2 text-emerald-500">
                     <i data-lucide="trophy" size="14"></i> Intel Summary
                 </h3>
                 <div id="ui-winner" class="text-sm space-y-2">
-                    <p class="opacity-30 italic text-xs text-center py-4">Scanning archives...</p>
+                    <p class="opacity-30 italic text-xs text-center py-4 text-emerald-900 font-bold">Scanning archives...</p>
                 </div>
             </div>
 
-            <!-- Global Rankings -->
             <div class="terminal-border p-4 rounded-lg bg-emerald-950/5 flex flex-col flex-1 overflow-hidden">
                 <h3 class="text-xs font-black uppercase mb-4 flex items-center gap-2 text-blue-400">
                     <i data-lucide="bar-chart-3" size="14"></i> Global Rankings
@@ -256,7 +251,6 @@
             </div>
         </div>
 
-        <!-- Center: The Vault -->
         <div class="lg:col-span-2 flex flex-col gap-6">
             <div id="vault-container" class="terminal-border rounded-xl p-8 bg-black/40 relative">
                 <div id="lock-indicators" class="flex justify-between mb-12"></div>
@@ -277,18 +271,14 @@
                     <p class="text-[10px] opacity-80 uppercase italic font-bold animate-pulse tracking-[0.15em]">Searching For Vulnerable Devices</p>
                 </div>
             </div>
-            <!-- Action Grid -->
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-2" id="action-grid"></div>
         </div>
 
-        <!-- Activity Feed -->
         <div class="terminal-border rounded-lg bg-black/60 p-4 flex flex-col overflow-hidden">
             <div class="text-[10px] font-black uppercase border-b border-emerald-900 pb-2 mb-4 flex items-center gap-2 text-emerald-500">
                 <i data-lucide="globe" size="12"></i> Global_Activity_Feed
             </div>
-            <div id="log-container" class="flex-1 flex flex-col justify-end overflow-hidden space-y-1">
-                <!-- Data culled at top -->
-            </div>
+            <div id="log-container" class="flex-1 flex flex-col justify-end overflow-hidden space-y-1"></div>
             <div class="mt-4 pt-2 border-t border-emerald-900/30 flex justify-between items-center text-[9px] font-bold opacity-30">
                 <span id="agent-id">ID: AUTH_PENDING</span>
                 <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> LIVE_FEED</span>
@@ -299,9 +289,8 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCizYJ7xFmY5Neu6gD9JAkVf1LT5_Zskk8",
             authDomain: "raid-vault-e67f7.firebaseapp.com",
@@ -317,7 +306,6 @@
         const VAULT_COOLDOWN_MS = 30 * 60 * 1000; 
         const STARTING_CREDITS = 20;
 
-        // --- DOM Elements Reference ---
         const el = {
             credits: document.getElementById('ui-credits'),
             timer: document.getElementById('ui-timer'),
@@ -346,10 +334,10 @@
         const ATTACKS = [
             { id: 'guess', name: 'Guess', cost: 0, cooldown: 5, dmg: [1, 5], icon: 'target', data: 0.1 },
             { id: 'hit', name: 'Hit', cost: 2, cooldown: 5, dmg: [10, 20], icon: 'zap', data: 0.5 },
-            { id: 'drill', name: 'Drill', cost: 5, cooldown: 5, dmg: [20, 50], icon: 'cpu', data: 1 },
-            { id: 'hack', name: 'Hack', cost: 15, cooldown: 5, dmg: [50, 150], icon: 'terminal', data: 5 },
-            { id: 'bomb', name: 'Bomb', cost: 50, cooldown: 5, dmg: [100, 500], icon: 'bomb', data: 20 },
-            { id: 'nuke', name: 'Nuke', cost: 100, cooldown: 5, dmg: [1000, 1000], icon: 'radiation', data: 100 },
+            { id: 'drill', name: 'Drill', cost: 5, cooldown: 5, dmg: [20, 50], icon: 'cpu', data: 1.0 },
+            { id: 'hack', name: 'Hack', cost: 15, cooldown: 5, dmg: [50, 150], icon: 'terminal', data: 5.0 },
+            { id: 'bomb', name: 'Bomb', cost: 50, cooldown: 5, dmg: [100, 500], icon: 'bomb', data: 20.0 },
+            { id: 'nuke', name: 'Nuke', cost: 100, cooldown: 5, dmg: [1000, 1000], icon: 'radiation', data: 100.0 },
         ];
 
         const HeistLogic = (() => {
@@ -361,9 +349,7 @@
                 /fuck/i, /shit/i, /nigger/i, /faggot/i, /cunt/i, /bitch/i, /asshole/i, /dick/i, /pussy/i, /bastard/i, /slut/i, /whore/i, /rape/i, /porn/i, /nigga/i, /retard/i, /cock/i, /kike/i, /spic/i, /chink/i, /penis/i, /vagina/i, /nazi/i, /hitler/i
             ];
 
-            const LEET_TRANSFORM = {
-                '4': 'a', '@': 'a', '8': 'b', '3': 'e', '1': 'i', '!': 'i', 'l': 'i', '0': 'o', '5': 's', '$': 's', '7': 't', '+': 't', 'v': 'u', 'u': 'u', '9': 'g'
-            };
+            const LEET_TRANSFORM = { '4': 'a', '@': 'a', '8': 'b', '3': 'e', '1': 'i', '!': 'i', 'l': 'i', '0': 'o', '5': 's', '$': 's', '7': 't', '+': 't', 'v': 'u', 'u': 'u', '9': 'g' };
 
             function createActionButtons() {
                 if (!el.actions) return;
@@ -374,7 +360,6 @@
                         <span class="cost-label text-[8px] opacity-40 font-bold">${a.cost} CRED</span>
                     </button>
                 `).join('');
-                
                 ATTACKS.forEach(a => {
                     const btn = document.getElementById(`btn-${a.id}`);
                     if (btn) btn.onclick = () => executeAttack(a);
@@ -382,34 +367,34 @@
                 lucide.createIcons();
             }
 
-            function sanitizeHandle(handle) {
-                let normalized = handle.toLowerCase();
-                Object.keys(LEET_TRANSFORM).forEach(key => { normalized = normalized.split(key).join(LEET_TRANSFORM[key]); });
-                return normalized.replace(/[^a-z]/g, '');
+            function sanitizeHandle(h) {
+                let n = h.toLowerCase();
+                Object.keys(LEET_TRANSFORM).forEach(k => { n = n.split(k).join(LEET_TRANSFORM[k]); });
+                return n.replace(/[^a-z]/g, '');
             }
 
-            function isHandleSecure(handle) {
-                const clean = sanitizeHandle(handle);
-                return !SECURITY_BLACKLIST.some(pattern => pattern.test(clean) || pattern.test(handle));
+            function isHandleSecure(h) {
+                const c = sanitizeHandle(h);
+                return !SECURITY_BLACKLIST.some(p => p.test(c) || p.test(h));
             }
 
             async function postGlobalActivity(msg) {
                 if (!state.user) return;
-                const activityColl = collection(db, 'artifacts', appId, 'public', 'data', 'activity');
-                await addDoc(activityColl, { msg, time: Date.now(), uid: state.user.uid });
+                try {
+                    await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'activity'), { msg, time: Date.now(), uid: state.user.uid });
+                } catch(e) {}
             }
 
             async function executeAttack(atk) {
-                if (!state.user || !state.heist || state.heist.isCracked) return;
-                if (!state.profile || state.profile.points < atk.cost) return;
+                if (!state.user || !state.heist || state.heist.isCracked || !state.profile || state.profile.points < atk.cost) return;
 
                 const now = Date.now();
-                const last = cooldowns[atk.id] || 0;
-                if (now - last < (atk.cooldown * 1000)) return;
+                if (now - (cooldowns[atk.id] || 0) < (atk.cooldown * 1000)) return;
 
                 const dmg = Math.floor(Math.random() * (atk.dmg[1] - atk.dmg[0] + 1)) + atk.dmg[0];
                 const heistRef = doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global');
                 const profRef = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
+                const pubRankRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
 
                 try {
                     await runTransaction(db, async (tx) => {
@@ -420,18 +405,15 @@
                         const hData = hSnap.data();
                         const pData = pSnap.data();
                         
-                        if (pData.points < atk.cost) throw "INSUFFICIENT_CREDITS";
+                        if (pData.points < atk.cost) throw "DENIED";
                         if (hData.isCracked) return;
 
                         const lIdx = hData.currentLock;
                         if (!hData.participants) hData.participants = {};
                         if (!hData.participants[lIdx]) hData.participants[lIdx] = [];
-                        if (!hData.participants[lIdx].includes(state.user.uid)) {
-                            hData.participants[lIdx].push(state.user.uid);
-                        }
+                        if (!hData.participants[lIdx].includes(state.user.uid)) hData.participants[lIdx].push(state.user.uid);
 
-                        const lData = hData.locks[lIdx];
-                        let newHp = Math.max(0, lData.hp - dmg);
+                        let newHp = Math.max(0, hData.locks[lIdx].hp - dmg);
                         hData.locks[lIdx].hp = newHp;
 
                         if (newHp === 0) {
@@ -440,15 +422,13 @@
                             else {
                                 hData.isCracked = true;
                                 hData.breachTime = Date.now();
-                                hData.lastWinner = { name: state.profile.displayName, method: atk.name };
+                                hData.lastWinner = { name: pData.displayName, method: atk.name };
                             }
                         }
 
                         tx.update(heistRef, hData);
-                        tx.update(profRef, { 
-                            points: increment(-atk.cost),
-                            dataGB: increment(atk.data) 
-                        });
+                        tx.update(profRef, { points: increment(-atk.cost), dataGB: increment(atk.data) });
+                        tx.update(pubRankRef, { dataGB: increment(atk.data), displayName: pData.displayName });
                     });
 
                     cooldowns[atk.id] = Date.now();
@@ -457,14 +437,14 @@
 
                     if (atk.id === 'nuke') { el.flash.style.opacity = '1'; setTimeout(() => el.flash.style.opacity = '0', 300); }
                     if (atk.id === 'bomb' || atk.id === 'nuke') { el.body.classList.add('shake-screen'); setTimeout(() => el.body.classList.remove('shake-screen'), 500); }
-                } catch (e) { console.error("Action denied"); }
+                } catch (e) { console.error("Neural interdiction active"); }
             }
 
             function refreshUI() {
                 if (!state.profile) return;
                 if (el.credits) el.credits.innerText = state.profile.points;
                 if (el.dataGB) el.dataGB.innerText = (state.profile.dataGB || 0).toFixed(1);
-                if (el.date) el.date.innerText = `Node_Secure // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
+                if (el.date) el.date.innerText = `Protocol // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
 
                 const now = Date.now();
                 ATTACKS.forEach(a => {
@@ -482,7 +462,6 @@
             function renderHeist() {
                 const h = state.heist;
                 if (!h) return;
-
                 handleHeistRewards(h);
 
                 if (el.indicators) {
@@ -505,75 +484,47 @@
                 } else {
                     if (el.hpSection) el.hpSection.classList.remove('hidden');
                     if (el.crackedMsg) el.crackedMsg.classList.add('hidden');
-                    const current = h.locks[h.currentLock];
-                    if (el.hpBar) { el.hpBar.max = current.maxHp; el.hpBar.value = current.hp; }
-                    if (el.hpLabel) el.hpLabel.innerText = `${current.hp} / ${current.maxHp} HP`;
+                    const c = h.locks[h.currentLock];
+                    if (el.hpBar) { el.hpBar.max = c.maxHp; el.hpBar.value = c.hp; }
+                    if (el.hpLabel) el.hpLabel.innerText = `${c.hp} / ${c.maxHp} HP`;
                     if (el.lockLabel) el.lockLabel.innerText = `Target: Lock_${h.currentLock + 1}`;
                 }
 
-                if (el.winner) {
-                    if (h.lastWinner) {
-                        el.winner.innerHTML = `
-                            <div class="bg-emerald-500 text-black p-2 font-black uppercase text-center text-[10px] mb-2 font-bold">Latest Breach</div>
-                            <div class="space-y-1 px-1">
-                                <p class="text-[11px] font-bold uppercase flex justify-between">
-                                    <span class="opacity-40">Agent:</span> 
-                                    <span class="text-white">${h.lastWinner.name}</span>
-                                </p>
-                                <p class="text-[11px] font-bold uppercase flex justify-between">
-                                    <span class="opacity-40">Method:</span> 
-                                    <span class="text-emerald-400">${h.lastWinner.method}</span>
-                                </p>
-                            </div>
-                        `;
-                    } else {
-                        el.winner.innerHTML = `<p class="opacity-20 italic text-[10px] text-center py-2">No archive data found</p>`;
-                    }
+                if (el.winner && h.lastWinner) {
+                    el.winner.innerHTML = `
+                        <div class="bg-emerald-500 text-black p-2 font-black uppercase text-center text-[10px] mb-2 font-bold">Latest Breach</div>
+                        <div class="space-y-1 px-1">
+                            <p class="text-[11px] font-bold uppercase flex justify-between"><span class="opacity-40">Agent:</span> <span class="text-white">${h.lastWinner.name}</span></p>
+                            <p class="text-[11px] font-bold uppercase flex justify-between"><span class="opacity-40">Method:</span> <span class="text-emerald-400">${h.lastWinner.method}</span></p>
+                        </div>`;
                 }
-                
                 lucide.createIcons();
                 refreshUI();
             }
 
             async function handleHeistRewards(h) {
                 if (!state.user || !state.profile) return;
-                let rewardAdded = false;
-                let currentPoints = state.profile.dataGB || 0;
+                let rewardGB = 0;
+                let log = [...(state.profile.rewardLog || [])];
 
                 h.locks.forEach((lock, idx) => {
-                    if (lock.cracked && h.participants?.[idx]?.includes(state.user.uid)) {
-                        const rewardKey = `lock_v3_${h.breachTime || 0}_${idx}`;
-                        if (!state.profile.rewardLog?.includes(rewardKey)) {
-                            currentPoints += 30;
-                            if (!state.profile.rewardLog) state.profile.rewardLog = [];
-                            state.profile.rewardLog.push(rewardKey);
-                            rewardAdded = true;
-                        }
+                    const key = `lock_v4_${h.breachTime || 0}_${idx}`;
+                    if (lock.cracked && h.participants?.[idx]?.includes(state.user.uid) && !log.includes(key)) {
+                        rewardGB += 30; log.push(key);
                     }
                 });
 
-                if (h.isCracked && h.breachTime > 0) {
-                    const breachKey = `breach_v3_${h.breachTime}`;
-                    if (!state.profile.rewardLog?.includes(breachKey)) {
-                        currentPoints += 50;
-                        if (!state.profile.rewardLog) state.profile.rewardLog = [];
-                        state.profile.rewardLog.push(breachKey);
-                        rewardAdded = true;
-                    }
+                const breachKey = `breach_v4_${h.breachTime}`;
+                if (h.isCracked && h.breachTime > 0 && !log.includes(breachKey)) {
+                    rewardGB += 50; log.push(breachKey);
                 }
 
-                if (rewardAdded) {
-                    const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
-                    const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
-                    await updateDoc(ref, { dataGB: currentPoints, rewardLog: state.profile.rewardLog });
-                    await setDoc(pubRef, { displayName: state.profile.displayName, dataGB: currentPoints }, { merge: true });
+                if (rewardGB > 0) {
+                    const profRef = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
+                    const pubRankRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
+                    await updateDoc(profRef, { dataGB: increment(rewardGB), rewardLog: log });
+                    await updateDoc(pubRankRef, { dataGB: increment(rewardGB) });
                 }
-            }
-
-            function renderGlobalLogs(logs) {
-                if (!el.logs) return;
-                const recentLogs = logs.slice(-30);
-                el.logs.innerHTML = recentLogs.map(log => `<div class="log-entry"><span class="opacity-30">[${new Date(log.time).toLocaleTimeString([], {hour12:false})}]</span> ${log.msg}</div>`).join('');
             }
 
             function renderLeaderboard(members) {
@@ -581,13 +532,12 @@
                 const sorted = members.sort((a, b) => (b.dataGB || 0) - (a.dataGB || 0)).slice(0, 20);
                 el.leaderboard.innerHTML = sorted.map((m, i) => `
                     <div class="leaderboard-item">
-                        <div class="flex items-center">
-                            <span class="rank-badge ${i === 0 ? 'rank-1' : ''}">${i + 1}</span>
-                            <span class="font-bold opacity-80">${(m.displayName || 'Anon').toUpperCase()}</span>
+                        <div class="flex items-center overflow-hidden">
+                            <span class="rank-badge shrink-0 ${i === 0 ? 'rank-1' : ''}">${i + 1}</span>
+                            <span class="font-bold opacity-80 truncate">${(m.displayName || 'Anon').toUpperCase()}</span>
                         </div>
-                        <span class="text-blue-400 font-black">${(m.dataGB || 0).toFixed(1)}GB</span>
-                    </div>
-                `).join('');
+                        <span class="text-blue-400 font-black shrink-0 ml-2">${(m.dataGB || 0).toFixed(1)}GB</span>
+                    </div>`).join('');
             }
 
             async function resetHeist(ref) {
@@ -608,14 +558,9 @@
                             onSnapshot(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), (snap) => {
                                 if (snap.exists()) {
                                     let data = snap.data();
-                                    if (!data.displayName) {
-                                        if (el.nameModal) el.nameModal.classList.remove('hidden');
-                                    } else {
-                                        if (el.nameModal) el.nameModal.classList.add('hidden');
-                                        if (el.agentId) el.agentId.innerText = `ID: ${data.displayName.toUpperCase()}`;
-                                    }
-                                    state.profile = data;
-                                    refreshUI();
+                                    if (!data.displayName) { if (el.nameModal) el.nameModal.classList.remove('hidden'); }
+                                    else { if (el.nameModal) el.nameModal.classList.add('hidden'); if (el.agentId) el.agentId.innerText = `ID: ${data.displayName.toUpperCase()}`; }
+                                    state.profile = data; refreshUI();
                                 } else {
                                     setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), { points: STARTING_CREDITS, dataGB: 0, rewardLog: [], lastTick: Date.now(), displayName: '' });
                                 }
@@ -623,34 +568,24 @@
                             onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'), (snap) => {
                                 if (snap.exists()) {
                                     const data = snap.data();
-                                    if (data.isCracked && (!data.breachTime || data.breachTime === 0)) {
-                                        updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'), { breachTime: Date.now() });
-                                    } else if (data.isCracked && Date.now() > (data.breachTime + VAULT_COOLDOWN_MS)) {
-                                        resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
-                                    } else { state.heist = data; renderHeist(); }
-                                } else { resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global')); }
-                            }, (err) => console.error("Heist listener failed:", err));
+                                    if (data.isCracked && (!data.breachTime || data.breachTime === 0)) updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'), { breachTime: Date.now() });
+                                    else if (data.isCracked && Date.now() > (data.breachTime + VAULT_COOLDOWN_MS)) resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
+                                    else { state.heist = data; renderHeist(); }
+                                } else resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
+                            });
                             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'activity'), (snap) => {
                                 const logs = snap.docs.map(doc => doc.data()).sort((a, b) => a.time - b.time);
-                                renderGlobalLogs(logs);
+                                if (el.logs) el.logs.innerHTML = logs.slice(-30).map(log => `<div class="log-entry"><span class="opacity-30">[${new Date(log.time).toLocaleTimeString([], {hour12:false})}]</span> ${log.msg}</div>`).join('');
                             });
                             onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), (snap) => {
-                                const members = snap.docs.map(doc => doc.data());
-                                renderLeaderboard(members);
-                            });
+                                renderLeaderboard(snap.docs.map(doc => doc.data()));
+                            }, (err) => console.error("Ranking offline"));
                         }
                     });
                 },
                 handleNameSubmit: async () => {
                     const val = el.nameInput.value.trim();
-                    if (val.length < 3) {
-                        if (el.nameError) { el.nameError.innerText = "Handle Too Short"; el.nameError.classList.remove('hidden'); }
-                        return;
-                    }
-                    if (!isHandleSecure(val)) {
-                        if (el.nameError) { el.nameError.innerText = "Access Denied: Restricted Pattern"; el.nameError.classList.remove('hidden'); }
-                        return;
-                    }
+                    if (val.length < 3 || !isHandleSecure(val)) { if (el.nameError) { el.nameError.innerText = "INVALID_HANDLE"; el.nameError.classList.remove('hidden'); } return; }
                     const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
                     const pubRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
                     await updateDoc(ref, { displayName: val });
@@ -660,27 +595,19 @@
                 tick: async () => {
                     const now = Date.now();
                     if (state.profile && !isUpdatingRefill) {
-                        const lastTick = state.profile.lastTick || now;
-                        const next = lastTick + POINT_TICK_MS;
-                        if (now >= next) {
+                        const last = state.profile.lastTick || now;
+                        if (now >= last + POINT_TICK_MS) {
                             isUpdatingRefill = true;
-                            const ticks = Math.floor((now - lastTick) / POINT_TICK_MS);
-                            try {
-                                const ref = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
-                                await updateDoc(ref, { points: state.profile.points + ticks, lastTick: lastTick + (ticks * POINT_TICK_MS) });
-                            } catch(e) { console.error("Sync Error"); } finally { isUpdatingRefill = false; }
+                            try { await updateDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile'), { points: state.profile.points + 1, lastTick: last + POINT_TICK_MS }); } catch(e) {} finally { isUpdatingRefill = false; }
                         } else {
-                            const diff = Math.max(0, next - now);
-                            if (el.timer) el.timer.innerText = `${Math.floor(diff / 60000)}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`;
+                            const diff = Math.max(0, (last + POINT_TICK_MS) - now);
+                            if (el.timer) el.timer.innerText = `${Math.floor(diff/60000)}:${Math.floor((diff%60000)/1000).toString().padStart(2, '0')}`;
                         }
                     }
-                    if (state.heist && state.heist.isCracked && state.heist.breachTime > 0) {
-                        const resetTime = state.heist.breachTime + VAULT_COOLDOWN_MS;
-                        const diff = Math.max(0, resetTime - now);
-                        if (el.resetCountdown) el.resetCountdown.innerText = `${Math.floor(diff / 60000)}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`;
+                    if (state.heist?.isCracked && state.heist.breachTime > 0) {
+                        const diff = Math.max(0, (state.heist.breachTime + VAULT_COOLDOWN_MS) - now);
+                        if (el.resetCountdown) el.resetCountdown.innerText = `${Math.floor(diff/60000)}:${Math.floor((diff%60000)/1000).toString().padStart(2, '0')}`;
                         if (diff <= 0) resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
-                    } else if (state.heist && state.heist.isCracked) {
-                        if (el.resetCountdown) el.resetCountdown.innerText = "INIT...";
                     }
                     refreshUI();
                 }
@@ -690,8 +617,7 @@
         const app = initializeApp(firebaseConfig);
         const auth = getAuth(app);
         const db = getFirestore(app);
-
-        if (el.nameSubmit) el.nameSubmit.onclick = HeistLogic.handleNameSubmit;
+        el.nameSubmit.onclick = HeistLogic.handleNameSubmit;
         setInterval(HeistLogic.tick, 1000);
         HeistLogic.start();
     </script>
