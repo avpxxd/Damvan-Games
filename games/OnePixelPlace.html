@@ -169,7 +169,7 @@
                     <label for="usernameInput" class="text-xs text-slate-400">Display Name</label>
                     <div class="flex gap-2">
                         <!-- Placeholder is Anon, text is greyed when empty due to CSS/JS logic -->
-                        <input type="text" id="usernameInput" maxlength="12" placeholder="Anon-"
+                        <input type="text" id="usernameInput" maxlength="12" placeholder="Anon"
                             class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm transition-colors">
                         <button id="saveNameBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors">Save</button>
                     </div>
@@ -259,6 +259,37 @@
         function getDefaultUsername(uid) {
             if (!uid || uid === 'system') return 'Anon';
             return 'Anon' + uid.substring(0, 4).toUpperCase();
+        }
+
+        // --- SECURITY HELPERS ---
+        function escapeHTML(str) {
+            // Prevents XSS attacks by converting HTML tags into safe text characters
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag]));
+        }
+
+        function isValidUsername(str) {
+            // 1. Check length and valid characters (only letters, numbers, spaces, underscores)
+            if (!/^[a-zA-Z0-9 _]{1,12}$/.test(str)) return false;
+            
+            // 2. Basic profanity & reserved word filter
+            // Removes spaces/numbers to catch attempts like "b 1 t c h"
+            const normalized = str.toLowerCase().replace(/[^a-z]/g, '');
+            
+            // Add any other words you want to block here
+            const blockedWords = [
+                'admin', 'system', 'mod', 'fuck', 'shit', 'bitch', 
+                'cunt', 'nigg', 'fag', 'asshole', 'dick', 'pussy', 
+                'cock', 'whore', 'slut', 'nazi', 'hitler'
+            ];
+            
+            return !blockedWords.some(word => normalized.includes(word));
         }
 
         // DOM Elements
@@ -357,12 +388,8 @@
             if(!user) return;
             const newName = usernameInput.value.trim();
             
-            if (newName.length === 0) {
-                showError("Username cannot be empty.");
-                return;
-            }
-            if (newName.length > 12) {
-                showError("Username must be 12 characters or less.");
+            if (!isValidUsername(newName)) {
+                showError("Invalid name. Use 1-12 letters/numbers only. No slurs.");
                 return;
             }
 
@@ -499,7 +526,8 @@
                 const isMe = entry.id === user?.uid;
                 const bgClass = isMe ? 'bg-blue-900/30 border border-blue-800/50' : 'border border-transparent';
                 
-                const displayUserName = entry.username || getDefaultUsername(entry.id);
+                // ESCAPE HTML to prevent <img> or <script> tags from rendering
+                const displayUserName = escapeHTML(entry.username || getDefaultUsername(entry.id));
 
                 const row = document.createElement('div');
                 row.className = `flex justify-between items-center p-3 mb-2 rounded-lg leaderboard-row ${bgClass}`;
