@@ -215,10 +215,7 @@
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, runTransaction, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ============================================================================
-        // 🔴🔴🔴 PASTE YOUR FIREBASE CONFIGURATION HERE 🔴🔴🔴
-        // Replace the object below with the one from your Firebase Project Settings.
-        // ============================================================================
+        // FIREBASE CONFIG
         const firebaseConfig = {
             apiKey: "AIzaSyB0kcX8UQ5Cel8NHIuQn6dNCD4Afe1kdSs",
             authDomain: "onepixelplace.firebaseapp.com",
@@ -284,9 +281,8 @@
             
             // Add any other words you want to block here
             const blockedWords = [
-                'admin', 'system', 'mod', 'fuck', 'shit', 'bitch', 
-                'cunt', 'nigg', 'fag', 'asshole', 'dick', 'pussy', 
-                'cock', 'whore', 'slut', 'nazi', 'hitler'
+                'fuck', 'shit', 'bitch', 'cunt', 'nigg', 'fag', 'asshole', 'dick', 'pussy', 
+                'cock', 'whore', 'slut', 'nazi', 'hitler', 
             ];
             
             return !blockedWords.some(word => normalized.includes(word));
