@@ -314,7 +314,7 @@
 
         function getDefaultUsername(uid) {
             if (!uid || uid === 'system') return 'Anon';
-            return 'Anon-' + uid.substring(0, 4).toUpperCase();
+            return 'Anon_' + uid.substring(0, 4).toUpperCase();
         }
 
         // --- SECURITY HELPERS ---
