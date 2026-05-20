@@ -111,10 +111,27 @@
 </head>
 <body class="min-h-screen flex flex-col">
 
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 z-[100] bg-slate-900 flex flex-col items-center justify-center transition-opacity duration-500">
+        <div class="relative w-16 h-16 mb-6">
+            <div class="absolute inset-0 border-4 border-slate-700 rounded-full"></div>
+            <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+        </div>
+        <h2 class="text-white pixel-font text-xs md:text-sm animate-pulse tracking-widest">CONNECTING...</h2>
+    </div>
+
     <!-- Header -->
-    <header class="bg-slate-800 border-b border-slate-700 py-6 px-4 text-center shadow-lg">
-        <h1 class="text-2xl md:text-3xl text-white tracking-widest uppercase" style="line-height: 1.5;">ONE PIXEL <br class="md:hidden"/> PLACE</h1>
-        <p class="text-slate-400 mt-3 text-sm max-w-lg mx-auto">Claim the pixel. Hold it as long as you can. Defend your color.</p>
+    <header class="bg-slate-800 border-b border-slate-700 py-4 px-4 shadow-lg flex justify-between items-center z-30 relative">
+        <button id="openLeaderboardBtn" class="lg:hidden text-slate-300 hover:text-white p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"></path><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"></path><path d="M4 22h16"></path><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"></path><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"></path><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"></path></svg>
+        </button>
+        <div class="text-center flex-1">
+            <h1 class="text-xl md:text-3xl text-white tracking-widest uppercase" style="line-height: 1.5;">ONE PIXEL <br class="md:hidden"/> PLACE</h1>
+            <p class="text-slate-400 mt-2 text-xs md:text-sm max-w-lg mx-auto">Claim the pixel. Hold it as long as you can. Defend your color.</p>
+        </div>
+        <button id="openProfileBtn" class="lg:hidden text-slate-300 hover:text-white p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        </button>
     </header>
 
     <!-- Main Content -->
@@ -155,52 +172,73 @@
             </div>
         </div>
 
+        <!-- Mobile Overlay -->
+        <div id="mobileOverlay" class="fixed inset-0 bg-black/60 z-40 hidden lg:hidden backdrop-blur-sm transition-opacity"></div>
+
         <!-- Right Column: Leaderboard & User Info -->
         <div class="w-full lg:w-1/3 flex flex-col space-y-6">
             
             <!-- User Settings Card -->
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl">
-                <h2 class="text-sm text-slate-400 font-semibold uppercase tracking-wider mb-4 flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                    Your Profile
-                </h2>
-                
-                <div class="flex flex-col gap-2">
-                    <label for="usernameInput" class="text-xs text-slate-400">Display Name</label>
-                    <div class="flex gap-2">
-                        <!-- Placeholder is Anon, text is greyed when empty due to CSS/JS logic -->
-                        <input type="text" id="usernameInput" maxlength="12" placeholder="Anon"
-                            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm transition-colors">
-                        <button id="saveNameBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors">Save</button>
-                    </div>
-                    <p id="nameStatus" class="text-xs text-emerald-400 hidden mt-1">Username saved!</p>
+            <div id="profilePanel" class="fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw] transform translate-x-full transition-transform duration-300 bg-slate-900 border-l border-slate-700 p-4 shadow-2xl flex flex-col lg:relative lg:transform-none lg:inset-auto lg:w-full lg:p-0 lg:bg-transparent lg:border-none lg:shadow-none">
+                <div class="lg:hidden flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                     <h2 class="text-white font-bold pixel-font text-sm">Profile</h2>
+                     <button id="closeProfileBtn" class="text-slate-400 hover:text-white">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                     </button>
                 </div>
+                
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-xl">
+                    <h2 class="text-sm text-slate-400 font-semibold uppercase tracking-wider mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                        Your Profile
+                    </h2>
+                    
+                    <div class="flex flex-col gap-2">
+                        <label for="usernameInput" class="text-xs text-slate-400">Display Name</label>
+                        <div class="flex gap-2">
+                            <!-- Placeholder is Anon, text is greyed when empty due to CSS/JS logic -->
+                            <input type="text" id="usernameInput" maxlength="12" placeholder="Anon"
+                                class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 font-mono text-sm transition-colors">
+                            <button id="saveNameBtn" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors">Save</button>
+                        </div>
+                        <p id="nameStatus" class="text-xs text-emerald-400 hidden mt-1">Username saved!</p>
+                    </div>
 
-                <!-- Google Auth UI -->
-                <div class="mt-5 pt-5 border-t border-slate-700 flex flex-col gap-3">
-                    <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Account Sync</p>
-                    <button id="googleAuthBtn" class="flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">
-                        <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-                        Sign in with Google
-                    </button>
-                    <button id="signOutBtn" class="hidden bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">Sign Out (Play as Guest)</button>
-                    <p id="authStatusText" class="text-xs text-slate-500 text-center">Playing as Guest. Link account to save progress.</p>
+                    <!-- Google Auth UI -->
+                    <div class="mt-5 pt-5 border-t border-slate-700 flex flex-col gap-3">
+                        <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Account Sync</p>
+                        <button id="googleAuthBtn" class="flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">
+                            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                            Sign in with Google
+                        </button>
+                        <button id="signOutBtn" class="hidden bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">Sign Out (Play as Guest)</button>
+                        <p id="authStatusText" class="text-xs text-slate-500 text-center">Playing as Guest. Link account to save progress.</p>
+                    </div>
                 </div>
             </div>
 
             <!-- Leaderboard Card -->
-            <div class="bg-slate-800 border border-slate-700 rounded-2xl flex flex-col shadow-xl overflow-hidden" style="height: 480px;">
-                <div class="bg-slate-900/50 p-4 border-b border-slate-700 flex justify-between items-center">
-                    <h2 class="text-sm font-bold text-white uppercase tracking-widest pixel-font flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-400"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="m11.4 3.7-2.6 5.8a1 1 0 0 1-.7.6l-6.3.9a1 1 0 0 0-.6 1.7l4.6 4.5a1 1 0 0 1 .3 1l-1 6.3a1 1 0 0 0 1.5 1.1l5.6-3a1 1 0 0 1 1 0l5.6 3a1 1 0 0 0 1.5-1.1l-1-6.3a1 1 0 0 1 .3-1l4.6-4.5a1 1 0 0 0-.6-1.7l-6.3-.9a1 1 0 0 1-.7-.6l-2.6-5.8a1 1 0 0 0-1.8 0Z"></path></svg>
-                        Top Holders
-                    </h2>
+            <div id="leaderboardPanel" class="fixed inset-y-0 left-0 z-50 w-80 max-w-[85vw] transform -translate-x-full transition-transform duration-300 bg-slate-900 border-r border-slate-700 p-4 shadow-2xl flex flex-col lg:relative lg:transform-none lg:inset-auto lg:w-full lg:p-0 lg:bg-transparent lg:border-none lg:shadow-none h-full lg:h-auto">
+                <div class="lg:hidden flex justify-between items-center mb-6 pb-4 border-b border-slate-800">
+                     <h2 class="text-white font-bold pixel-font text-sm">Leaderboard</h2>
+                     <button id="closeLeaderboardBtn" class="text-slate-400 hover:text-white">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                     </button>
                 </div>
-                
-                <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="leaderboardList">
-                    <!-- Leaderboard Entries go here -->
-                    <div class="flex items-center justify-center h-full text-slate-500 text-sm">
-                        Loading leaderboard...
+
+                <div class="bg-slate-800 border border-slate-700 rounded-2xl flex flex-col shadow-xl overflow-hidden flex-1 lg:h-[480px]">
+                    <div class="bg-slate-900/50 p-4 border-b border-slate-700 flex justify-between items-center">
+                        <h2 class="text-sm font-bold text-white uppercase tracking-widest pixel-font flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-yellow-400"><path d="M8 21h8"></path><path d="M12 17v4"></path><path d="m11.4 3.7-2.6 5.8a1 1 0 0 1-.7.6l-6.3.9a1 1 0 0 0-.6 1.7l4.6 4.5a1 1 0 0 1 .3 1l-1 6.3a1 1 0 0 0 1.5 1.1l5.6-3a1 1 0 0 1 1 0l5.6 3a1 1 0 0 0 1.5-1.1l-1-6.3a1 1 0 0 1 .3-1l4.6-4.5a1 1 0 0 0-.6-1.7l-6.3-.9a1 1 0 0 1-.7-.6l-2.6-5.8a1 1 0 0 0-1.8 0Z"></path></svg>
+                            Top Holders
+                        </h2>
+                    </div>
+                    
+                    <div class="flex-1 overflow-y-auto custom-scrollbar p-2" id="leaderboardList">
+                        <!-- Leaderboard Entries go here -->
+                        <div class="flex items-center justify-center h-full text-slate-500 text-sm">
+                            Loading leaderboard...
+                        </div>
                     </div>
                 </div>
             </div>
@@ -263,6 +301,9 @@
         let pixelUnsubscribe = null;
         let leaderboardUnsubscribe = null;
         let liveTickerInterval = null;
+        
+        let isPixelLoaded = false;
+        let isLeaderboardLoaded = false;
 
         const COOLDOWN_DURATION_MS = 5000; // 5 seconds
         const COLORS = [
@@ -318,6 +359,16 @@
         const signOutBtn = document.getElementById('signOutBtn');
         const authStatusText = document.getElementById('authStatusText');
         
+        const openLeaderboardBtn = document.getElementById('openLeaderboardBtn');
+        const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+        const leaderboardPanel = document.getElementById('leaderboardPanel');
+        
+        const openProfileBtn = document.getElementById('openProfileBtn');
+        const closeProfileBtn = document.getElementById('closeProfileBtn');
+        const profilePanel = document.getElementById('profilePanel');
+        const mobileOverlay = document.getElementById('mobileOverlay');
+        const loadingScreen = document.getElementById('loadingScreen');
+        
         const errorModal = document.getElementById('errorModal');
         const errorMessage = document.getElementById('errorMessage');
         const closeErrorBtn = document.getElementById('closeErrorBtn');
@@ -338,6 +389,37 @@
             googleAuthBtn.addEventListener('click', handleGoogleAuth);
             signOutBtn.addEventListener('click', handleSignOut);
             closeErrorBtn.addEventListener('click', () => { errorModal.style.display = 'none'; });
+            
+            // Mobile Menu Listeners
+            openLeaderboardBtn.addEventListener('click', () => togglePanel(leaderboardPanel, true));
+            closeLeaderboardBtn.addEventListener('click', () => togglePanel(leaderboardPanel, false));
+            openProfileBtn.addEventListener('click', () => togglePanel(profilePanel, true));
+            closeProfileBtn.addEventListener('click', () => togglePanel(profilePanel, false));
+            mobileOverlay.addEventListener('click', () => {
+                togglePanel(leaderboardPanel, false);
+                togglePanel(profilePanel, false);
+            });
+        }
+
+        function togglePanel(panel, show) {
+            if (show) {
+                if(panel === leaderboardPanel) panel.classList.remove('-translate-x-full');
+                else panel.classList.remove('translate-x-full');
+                mobileOverlay.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+            } else {
+                if(panel === leaderboardPanel) panel.classList.add('-translate-x-full');
+                else panel.classList.add('translate-x-full');
+                mobileOverlay.classList.add('hidden');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function checkLoadingComplete() {
+            if (isPixelLoaded && isLeaderboardLoaded && loadingScreen) {
+                loadingScreen.style.opacity = '0';
+                setTimeout(() => loadingScreen.classList.add('hidden'), 500);
+            }
         }
 
         function selectColor(color, swatchEl) {
@@ -415,7 +497,8 @@
                     }
                 } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
                     console.error("Google auth error:", error);
-                    showError("Auth failed. Ensure 'Google' is enabled in your Firebase Console.");
+                    // Updated to show the exact error message from Firebase so you can diagnose the sandbox issue
+                    showError("Auth failed: " + error.message + " (Code: " + error.code + ")");
                 }
             }
         }
@@ -514,6 +597,9 @@
             const pixelRef = doc(db, ...basePath, 'gameState', 'pixel');
             
             pixelUnsubscribe = onSnapshot(pixelRef, (docSnap) => {
+                isPixelLoaded = true;
+                checkLoadingComplete();
+
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     updatePixelVisuals(data);
@@ -533,6 +619,9 @@
             // 2. Listen to the Base Leaderboard
             const leaderboardColRef = collection(db, ...basePath, 'leaderboard');
             leaderboardUnsubscribe = onSnapshot(leaderboardColRef, (snapshot) => {
+                isLeaderboardLoaded = true;
+                checkLoadingComplete();
+                
                 baseLeaderboard = [];
                 snapshot.forEach(doc => {
                     baseLeaderboard.push({ id: doc.id, ...doc.data() });
