@@ -519,7 +519,7 @@
                     try {
                         await signInWithPopup(auth, provider);
                     } catch (signInError) {
-                        showError("Failed to sign in: " + signInError.message);
+                        showError("Failed to sign in: Sign In Popup Blocked, Please Try Again.");
                     }
                 } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
                     console.error("Google auth error:", error);
