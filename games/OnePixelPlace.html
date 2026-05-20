@@ -175,6 +175,17 @@
                     </div>
                     <p id="nameStatus" class="text-xs text-emerald-400 hidden mt-1">Username saved!</p>
                 </div>
+
+                <!-- Google Auth UI -->
+                <div class="mt-5 pt-5 border-t border-slate-700 flex flex-col gap-3">
+                    <p class="text-xs text-slate-400 font-semibold uppercase tracking-wider">Account Sync</p>
+                    <button id="googleAuthBtn" class="flex items-center justify-center gap-2 bg-white text-slate-900 hover:bg-slate-200 px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">
+                        <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                        Sign in with Google
+                    </button>
+                    <button id="signOutBtn" class="hidden bg-slate-700 hover:bg-slate-600 text-white px-4 py-2 rounded-lg font-semibold text-sm transition-colors w-full">Sign Out (Play as Guest)</button>
+                    <p id="authStatusText" class="text-xs text-slate-500 text-center">Playing as Guest. Link account to save progress.</p>
+                </div>
             </div>
 
             <!-- Leaderboard Card -->
@@ -212,10 +223,13 @@
     <!-- Firebase Imports -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, GoogleAuthProvider, signInWithPopup, linkWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, runTransaction, Timestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // FIREBASE CONFIG
+        // ============================================================================
+        // 🔴🔴🔴 PASTE YOUR FIREBASE CONFIGURATION HERE 🔴🔴🔴
+        // Replace the object below with the one from your Firebase Project Settings.
+        // ============================================================================
         const firebaseConfig = {
             apiKey: "AIzaSyB0kcX8UQ5Cel8NHIuQn6dNCD4Afe1kdSs",
             authDomain: "onepixelplace.firebaseapp.com",
@@ -232,7 +246,6 @@
         const db = getFirestore(app);
 
         // Required paths configuration for Firebase Security Rules
-        // DO NOT CHANGE THESE APP IDS or paths otherwise Firebase will block your requests!
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'one-pixel-place-app';
         const basePath = ['artifacts', appId, 'public', 'data'];
 
@@ -245,6 +258,11 @@
         let currentOwnerCaptureTime = null;
         let holdTimerInterval = null;
         let currentUsername = "";
+        let baseLeaderboard = []; // Stores the static leaderboard from the database
+        
+        let pixelUnsubscribe = null;
+        let leaderboardUnsubscribe = null;
+        let liveTickerInterval = null;
 
         const COOLDOWN_DURATION_MS = 5000; // 5 seconds
         const COLORS = [
@@ -255,12 +273,11 @@
 
         function getDefaultUsername(uid) {
             if (!uid || uid === 'system') return 'Anon';
-            return 'Anon' + uid.substring(0, 4).toUpperCase();
+            return 'Anon-' + uid.substring(0, 4).toUpperCase();
         }
 
         // --- SECURITY HELPERS ---
         function escapeHTML(str) {
-            // Prevents XSS attacks by converting HTML tags into safe text characters
             if (!str) return '';
             return str.replace(/[&<>'"]/g, tag => ({
                 '&': '&amp;',
@@ -272,17 +289,13 @@
         }
 
         function isValidUsername(str) {
-            // 1. Check length and valid characters (only letters, numbers, spaces, underscores)
             if (!/^[a-zA-Z0-9 _]{1,12}$/.test(str)) return false;
             
-            // 2. Basic profanity & reserved word filter
-            // Removes spaces/numbers to catch attempts like "b 1 t c h"
             const normalized = str.toLowerCase().replace(/[^a-z]/g, '');
-            
-            // Add any other words you want to block here
             const blockedWords = [
-                'fuck', 'shit', 'bitch', 'cunt', 'nigg', 'fag', 'asshole', 'dick', 'pussy', 
-                'cock', 'whore', 'slut', 'nazi', 'hitler', 
+                'admin', 'system', 'mod', 'fuck', 'shit', 'bitch', 
+                'cunt', 'nigg', 'fag', 'asshole', 'dick', 'pussy', 
+                'cock', 'whore', 'slut', 'nazi', 'hitler'
             ];
             
             return !blockedWords.some(word => normalized.includes(word));
@@ -301,13 +314,16 @@
         const saveNameBtn = document.getElementById('saveNameBtn');
         const nameStatus = document.getElementById('nameStatus');
         
+        const googleAuthBtn = document.getElementById('googleAuthBtn');
+        const signOutBtn = document.getElementById('signOutBtn');
+        const authStatusText = document.getElementById('authStatusText');
+        
         const errorModal = document.getElementById('errorModal');
         const errorMessage = document.getElementById('errorMessage');
         const closeErrorBtn = document.getElementById('closeErrorBtn');
 
         // Setup UI
         function initUI() {
-            // Setup Palette
             paletteEl.innerHTML = '';
             COLORS.forEach(color => {
                 const swatch = document.createElement('div');
@@ -317,13 +333,10 @@
                 paletteEl.appendChild(swatch);
             });
 
-            // Setup Pixel Click
             pixelEl.addEventListener('click', handlePixelClick);
-            
-            // Setup Username Save
             saveNameBtn.addEventListener('click', handleSaveUsername);
-
-            // Modal close
+            googleAuthBtn.addEventListener('click', handleGoogleAuth);
+            signOutBtn.addEventListener('click', handleSignOut);
             closeErrorBtn.addEventListener('click', () => { errorModal.style.display = 'none'; });
         }
 
@@ -344,22 +357,78 @@
         
         async function initAuth() {
             try {
-                // Anonymous sign-in
-                await signInAnonymously(auth);
+                await auth.authStateReady(); // Wait for existing session to load
+                if (!auth.currentUser) {
+                    // Removed the __initial_auth_token check because you are using your own DB!
+                    await signInAnonymously(auth);
+                }
             } catch (error) {
                 console.error("Auth error:", error);
-                showError("Failed to authenticate to the server. Check your Firebase Setup.");
+                // Updated to show the exact error message from Firebase
+                showError("Auth failed: " + error.message); 
             }
         }
 
         onAuthStateChanged(auth, async (newUser) => {
             user = newUser;
             if (user) {
-                console.log("Logged in anonymously with ID:", user.uid);
+                console.log("Logged in with ID:", user.uid);
+                updateAuthUI();
                 await loadUserProfile();
                 setupListeners();
             }
         });
+
+        function updateAuthUI() {
+            if (!user) return;
+            const isGoogleLinked = user.providerData.some(p => p.providerId === 'google.com');
+            
+            if (isGoogleLinked) {
+                googleAuthBtn.classList.add('hidden');
+                signOutBtn.classList.remove('hidden');
+                authStatusText.textContent = "Progress is saved and synced.";
+            } else {
+                googleAuthBtn.classList.remove('hidden');
+                signOutBtn.classList.add('hidden');
+                authStatusText.textContent = "Playing as Guest. Link account to save progress.";
+            }
+        }
+
+        async function handleGoogleAuth() {
+            const provider = new GoogleAuthProvider();
+            try {
+                if (user && user.isAnonymous) {
+                    // Try to attach their existing Guest profile to Google
+                    await linkWithPopup(user, provider);
+                    updateAuthUI();
+                } else {
+                    await signInWithPopup(auth, provider);
+                }
+            } catch (error) {
+                if (error.code === 'auth/credential-already-in-use') {
+                    // This Google account is already linked to another profile.
+                    // Just sign into that existing profile directly.
+                    try {
+                        await signInWithPopup(auth, provider);
+                    } catch (signInError) {
+                        showError("Failed to sign in: " + signInError.message);
+                    }
+                } else if (error.code !== 'auth/popup-closed-by-user' && error.code !== 'auth/cancelled-popup-request') {
+                    console.error("Google auth error:", error);
+                    showError("Auth failed. Ensure 'Google' is enabled in your Firebase Console.");
+                }
+            }
+        }
+
+        async function handleSignOut() {
+            try {
+                await signOut(auth);
+                // Immediately revert them to a clean Guest account so they can keep playing
+                await signInAnonymously(auth);
+            } catch (error) {
+                showError("Failed to sign out.");
+            }
+        }
 
         async function loadUserProfile() {
             if(!user) return;
@@ -371,7 +440,7 @@
                     currentUsername = docSnap.data().username;
                     usernameInput.value = currentUsername;
                 } else {
-                    currentUsername = ""; // Empty implies "Anon" placeholder is shown
+                    currentUsername = ""; 
                     usernameInput.placeholder = getDefaultUsername(user.uid);
                     usernameInput.value = "";
                 }
@@ -394,21 +463,16 @@
             nameStatus.classList.add('hidden');
 
             const normalizedName = newName.toLowerCase();
-            
-            // Paths explicitly mapped to strict artifacts folder
             const takenNamesRef = doc(db, ...basePath, 'takenUsernames', normalizedName);
             const userProfileRef = doc(db, ...basePath, 'userProfiles', user.uid);
 
             try {
-                // Using transaction to safely claim the username without needing complex queries
                 await runTransaction(db, async (transaction) => {
-                    // 1. Check if name is taken by someone else
                     const nameDoc = await transaction.get(takenNamesRef);
                     if (nameDoc.exists() && nameDoc.data().uid !== user.uid) {
                         throw new Error("Username already taken!");
                     }
 
-                    // 2. If user had an old name, clear it from the taken list
                     const currentProfile = await transaction.get(userProfileRef);
                     if (currentProfile.exists()) {
                         const oldName = currentProfile.data().username;
@@ -418,10 +482,7 @@
                         }
                     }
 
-                    // 3. Claim new name
                     transaction.set(takenNamesRef, { uid: user.uid, original: newName });
-                    
-                    // 4. Update profile
                     transaction.set(userProfileRef, { username: newName }, { merge: true });
                 });
 
@@ -443,16 +504,20 @@
 
         function setupListeners() {
             if (!user) return;
+            
+            // Clean up old listeners so they don't duplicate when signing in/out
+            if (pixelUnsubscribe) pixelUnsubscribe();
+            if (leaderboardUnsubscribe) leaderboardUnsubscribe();
+            if (liveTickerInterval) clearInterval(liveTickerInterval);
 
             // 1. Listen to the Single Pixel
             const pixelRef = doc(db, ...basePath, 'gameState', 'pixel');
             
-            onSnapshot(pixelRef, (docSnap) => {
+            pixelUnsubscribe = onSnapshot(pixelRef, (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     updatePixelVisuals(data);
                 } else {
-                    // Initialize pixel if it doesn't exist
                     setDoc(pixelRef, {
                         color: '#ffffff',
                         ownerId: 'system',
@@ -465,25 +530,20 @@
                 showError("Lost connection to the game server.");
             });
 
-            // 2. Listen to the Leaderboard
-            // To avoid complex query requirement (orderBy/limit), we fetch all and sort in memory
+            // 2. Listen to the Base Leaderboard
             const leaderboardColRef = collection(db, ...basePath, 'leaderboard');
-            onSnapshot(leaderboardColRef, (snapshot) => {
-                const allEntries = [];
+            leaderboardUnsubscribe = onSnapshot(leaderboardColRef, (snapshot) => {
+                baseLeaderboard = [];
                 snapshot.forEach(doc => {
-                    allEntries.push({ id: doc.id, ...doc.data() });
+                    baseLeaderboard.push({ id: doc.id, ...doc.data() });
                 });
-                
-                // Sort descending in memory
-                allEntries.sort((a, b) => (b.totalHoldTime || 0) - (a.totalHoldTime || 0));
-                
-                // Get top 10
-                const top10 = allEntries.slice(0, 10);
-                updateLeaderboardUI(top10);
-                
+                refreshLiveLeaderboard(); // Immediately update view
             }, (error) => {
                 console.error("Leaderboard sync error:", error);
             });
+
+            // 3. Start Live Ticker - Updates the leaderboard every second
+            liveTickerInterval = setInterval(refreshLiveLeaderboard, 1000);
         }
 
         function updatePixelVisuals(data) {
@@ -494,23 +554,55 @@
             currentOwnerId = data.ownerId;
             currentOwnerCaptureTime = data.captureTime ? data.captureTime.toMillis() : Date.now();
 
-            // Restart the live ticker
             if (holdTimerInterval) clearInterval(holdTimerInterval);
             
             holdTimerInterval = setInterval(() => {
                 const heldMs = Date.now() - currentOwnerCaptureTime;
                 currentHoldTimeEl.textContent = (heldMs / 1000).toFixed(1) + 's';
             }, 100);
+            
+            // Re-render live leaderboard when pixel changes hands
+            refreshLiveLeaderboard();
+        }
+
+        function refreshLiveLeaderboard() {
+            if (baseLeaderboard.length === 0 && !currentOwnerId) {
+                leaderboardListEl.innerHTML = '<div class="text-center text-slate-500 mt-10">No scores yet. Claim the pixel!</div>';
+                return;
+            }
+
+            // Clone the leaderboard so we don't accidentally save live numbers back to the base array
+            const liveEntries = baseLeaderboard.map(entry => ({...entry}));
+
+            // Calculate the active session's live hold time
+            if (currentOwnerId && currentOwnerId !== 'system' && currentOwnerCaptureTime) {
+                const liveHoldTime = Date.now() - currentOwnerCaptureTime;
+                
+                // Add the live time to the current owner's base score
+                const ownerEntry = liveEntries.find(e => e.id === currentOwnerId);
+                if (ownerEntry) {
+                    ownerEntry.totalHoldTime = (ownerEntry.totalHoldTime || 0) + liveHoldTime;
+                } else {
+                    // Create a temporary row if they aren't fully registered in the DB yet
+                    liveEntries.push({
+                        id: currentOwnerId,
+                        username: currentOwnerNameEl.textContent,
+                        totalHoldTime: liveHoldTime
+                    });
+                }
+            }
+
+            // Sort descending based on new live numbers
+            liveEntries.sort((a, b) => (b.totalHoldTime || 0) - (a.totalHoldTime || 0));
+            
+            // Get top 10
+            const top10 = liveEntries.slice(0, 10);
+            updateLeaderboardUI(top10);
         }
 
         function updateLeaderboardUI(entries) {
             leaderboardListEl.innerHTML = '';
             
-            if(entries.length === 0) {
-                leaderboardListEl.innerHTML = '<div class="text-center text-slate-500 mt-10">No scores yet. Claim the pixel!</div>';
-                return;
-            }
-
             entries.forEach((entry, index) => {
                 const rankColor = index === 0 ? 'text-yellow-400 font-bold' : 
                                  index === 1 ? 'text-slate-300 font-bold' : 
@@ -549,7 +641,6 @@
             }
             if (cooldownActive) return;
 
-            // Start local cooldown
             startCooldown();
 
             const pixelRef = doc(db, ...basePath, 'gameState', 'pixel');
@@ -561,14 +652,12 @@
             const displayUserName = currentUsername || getDefaultUsername(user.uid);
 
             try {
-                // Using transaction to atomically update pixel AND the previous owner's total time
                 await runTransaction(db, async (transaction) => {
                     let currentTotal = 0;
                     let oldName = prevOwnerId ? getDefaultUsername(prevOwnerId) : 'Anon';
                     let updatePrevOwner = false;
                     let prevLeaderboardRef = null;
 
-                    // 1. ALL READS FIRST (Firestore Requirement)
                     if (prevOwnerId && prevOwnerId !== 'system' && timeHeldMs > 0) {
                         prevLeaderboardRef = doc(db, ...basePath, 'leaderboard', prevOwnerId);
                         const prevDoc = await transaction.get(prevLeaderboardRef);
@@ -580,8 +669,6 @@
                         }
                     }
 
-                    // 2. ALL WRITES AFTER READS
-                    // Update Pixel State
                     transaction.set(pixelRef, {
                         color: selectedColor,
                         ownerId: user.uid,
@@ -589,24 +676,20 @@
                         captureTime: Timestamp.fromMillis(newCaptureTimeMs)
                     });
 
-                    // Update Previous Owner's Total Time (if valid)
                     if (updatePrevOwner) {
-                        // We update their username too just in case it wasn't saved yet
                         transaction.set(prevLeaderboardRef, {
                             totalHoldTime: currentTotal + timeHeldMs,
-                            username: oldName // preserve their name
+                            username: oldName 
                         }, { merge: true });
                     }
                 });
 
-                // Also ensure CURRENT user is on the leaderboard with their name even before they lose the pixel
                 const myLeaderboardRef = doc(db, ...basePath, 'leaderboard', user.uid);
                 setDoc(myLeaderboardRef, { username: displayUserName }, { merge: true });
 
             } catch (error) {
                 console.error("Transaction failed: ", error);
                 showError("Failed to claim pixel. " + error.message);
-                // Reset cooldown on fail
                 cooldownActive = false;
                 cooldownOverlay.classList.add('hidden');
             }
