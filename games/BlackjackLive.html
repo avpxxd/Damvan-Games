@@ -371,31 +371,83 @@ service cloud.firestore {
             const [isWatchingAd, setIsWatchingAd] = useState(false);
             const [adTimeLeft, setAdTimeLeft] = useState(10);
             const [currentAdUrl, setCurrentAdUrl] = useState(''); // Tracks which video is playing
-            const [readyTimeLeft, setReadyTimeLeft] = useState(15);
+            const [readyTimeLeft, setReadyTimeLeft] = useState(30);
+            const [actionTimeLeft, setActionTimeLeft] = useState(30);
+            const [nextRoundTimeLeft, setNextRoundTimeLeft] = useState(30);
             
             // Ready Timer Effect
             useEffect(() => {
                 let interval;
                 const myPlayer = roomData?.players?.[user?.uid];
+                const isBroke = myPlayer && myPlayer.chips < 10 && myPlayer.currentBet === 0;
                 
                 if (roomData?.status === 'waiting' && myPlayer && !myPlayer.isReady) {
                     interval = setInterval(() => {
                         setReadyTimeLeft((prev) => {
                             if (prev <= 1) {
-                                leaveRoom();
+                                // Broke players go AFK (auto-ready) instead of being kicked
+                                if (isBroke) {
+                                    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'blackjack_rooms', roomCode);
+                                    updateDoc(roomRef, { [`players.${user.uid}.isReady`]: true, [`players.${user.uid}.status`]: 'spectating' });
+                                } else {
+                                    leaveRoom();
+                                }
                                 return 0;
                             }
                             return prev - 1;
                         });
                     }, 1000);
                 } else {
-                    setReadyTimeLeft(15);
+                    setReadyTimeLeft(30);
                 }
 
                 return () => clearInterval(interval);
             }, [roomData?.status, roomData?.players?.[user?.uid]?.isReady]);
 
-            // Auto-start round effect
+            // Action Timer Effect (hit/stand screen) - auto-stand on timeout
+            useEffect(() => {
+                let interval;
+                const myPlayer = roomData?.players?.[user?.uid];
+                
+                if (roomData?.status === 'playing' && myPlayer?.status === 'playing') {
+                    setActionTimeLeft(30);
+                    interval = setInterval(() => {
+                        setActionTimeLeft((prev) => {
+                            if (prev <= 1) {
+                                stand();
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                } else {
+                    setActionTimeLeft(30);
+                }
+
+                return () => clearInterval(interval);
+            }, [roomData?.status, roomData?.players?.[user?.uid]?.status]);
+
+            // Next Round Timer Effect (host only) - auto-advances after 30s
+            useEffect(() => {
+                let interval;
+                
+                if (roomData?.status === 'game_over' && user && roomData?.hostId === user?.uid) {
+                    setNextRoundTimeLeft(30);
+                    interval = setInterval(() => {
+                        setNextRoundTimeLeft((prev) => {
+                            if (prev <= 1) {
+                                resetForNextRound();
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                } else {
+                    setNextRoundTimeLeft(30);
+                }
+
+                return () => clearInterval(interval);
+            }, [roomData?.status]);
             useEffect(() => {
                 if (!roomData || !user || roomData.hostId !== user.uid || roomData.status !== 'waiting') return;
                 const playersList = Object.values(roomData.players);
@@ -588,6 +640,12 @@ service cloud.firestore {
                             const data = docSnap.data();
                             const numPlayers = Object.keys(data.players || {}).length;
 
+                            // Sweep: delete empty rooms opportunistically
+                            if (numPlayers === 0) {
+                                deleteDoc(docSnap.ref);
+                                return;
+                            }
+
                             // Find a room with less than 4 players that hasn't started dealing yet
                             if (numPlayers < 4 && data.status === 'waiting') {
                                 // Prioritize the room closest to being full to get games started faster
@@ -696,7 +754,11 @@ service cloud.firestore {
                 delete updatedPlayers[uidToKick];
 
                 try {
-                    await updateDoc(roomRef, { players: updatedPlayers });
+                    if (Object.keys(updatedPlayers).length === 0) {
+                        await deleteDoc(roomRef);
+                    } else {
+                        await updateDoc(roomRef, { players: updatedPlayers });
+                    }
                 } catch(err) {
                     console.error("Error kicking player:", err);
                 }
@@ -728,7 +790,9 @@ service cloud.firestore {
                 const dealerHand = [deck.pop(), deck.pop()];
                 
                 for (let uid in updatedPlayers) {
-                    if (updatedPlayers[uid].currentBet === 0) {
+                    const isBroke = updatedPlayers[uid].chips < 10 && updatedPlayers[uid].currentBet === 0;
+                    
+                    if (updatedPlayers[uid].currentBet === 0 && !isBroke) {
                         // Only force a bet if they can afford it
                         if (updatedPlayers[uid].chips >= 10) {
                             updatedPlayers[uid].chips -= 10;
@@ -1011,92 +1075,137 @@ service cloud.firestore {
                         </div>
                     </div>
 
-                    <div className="flex-grow relative flex flex-col items-center justify-center py-10 w-full max-w-5xl mx-auto poker-table">
-                        
-                        <div className="absolute top-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center w-full">
-                            <div className="text-amber-200/80 uppercase tracking-widest font-bold mb-4 text-sm sm:text-base border-b border-amber-500/30 pb-1">Dealer Must Draw to 16, Stand on 17</div>
-                            <div className="flex space-x-[-20px] sm:space-x-[-30px] justify-center mb-2 z-10 relative">
-                                {roomData.dealerCards?.length === 0 && roomData.status === 'waiting' && (
-                                    <div className="w-16 h-24 sm:w-20 sm:h-28 border-2 border-dashed border-white/20 rounded-lg"></div>
-                                )}
-                                {roomData.dealerCards?.map((card, idx) => (
-                                    <div key={idx} style={{ zIndex: idx, animationDelay: `${idx * 0.15}s` }} className="relative animate-card-deal opacity-0">
-                                         <Card card={card} hidden={roomData.status === 'playing' && idx === 1} />
-                                    </div>
-                                ))}
-                            </div>
-                            {roomData.dealerCards?.length > 0 && (
-                                <div className="bg-black/60 px-4 py-1 rounded-full text-white font-bold border border-white/10 shadow-lg animate-pop-in">
-                                    {visibleDealerScore}
-                                </div>
-                            )}
-                        </div>
+                    {/* ── MAIN TABLE ── 3-column: left players | center | right players */}
+                    <div className="flex-grow flex flex-row items-stretch w-full max-w-5xl mx-auto poker-table overflow-hidden">
 
-                        <div className="w-full flex justify-around px-4 sm:px-12 mt-72 sm:mt-64 mb-auto relative z-0">
-                            {otherPlayers.map(([uid, p]) => (
-                                <div key={uid} className="flex flex-col items-center opacity-80 scale-90 transition-all duration-300 group">
-                                    <div className="bg-black/50 px-3 py-1 rounded-t-lg text-sm text-center border-b-2 border-blue-500 min-w-[100px] relative">
+                        {/* Helper component for a single opponent seat */}
+                        {(() => {
+                            // Only OTHER players go on the sides — the current player lives in the bottom controls panel only
+                            const others = otherPlayers; // array of [uid, p]
+
+                            // Distribute others: first half left, second half right
+                            // 1 other  → left:1  right:0
+                            // 2 others → left:1  right:1
+                            // 3 others → left:1  right:2
+                            const leftPlayers  = others.slice(0, Math.ceil(others.length / 2));
+                            const rightPlayers = others.slice(Math.ceil(others.length / 2));
+
+                            const OpponentSeat = ({ uid, p, alignRight }) => (
+                                <div className={`flex flex-col ${alignRight ? 'items-end' : 'items-start'} group mb-4`}>
+                                    <div className={`bg-black/50 px-3 py-1 rounded-lg text-sm text-center border-b-2 border-blue-500 min-w-[90px] relative`}>
                                         {isHost && (
                                             <button onClick={() => kickPlayer(uid)} className="absolute -top-2 -right-2 bg-red-600 hover:bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] opacity-0 group-hover:opacity-100 transition-opacity z-50 shadow-lg" title="Kick Player">✕</button>
                                         )}
-                                        <div className="text-white truncate">{p.name}</div>
-                                        <div className="text-green-400 font-bold">${p.chips}</div>
+                                        <div className="font-bold truncate max-w-[100px] text-white">{p.name}</div>
+                                        <div className="text-green-400 font-bold text-xs">${p.chips}</div>
+                                        {p.currentBet > 0 && <div className="text-amber-400 text-xs">Bet: ${p.currentBet}</div>}
                                     </div>
-                                    <div className="flex space-x-[-30px] mt-2 min-h-[96px]">
-                                        {p.cards?.length === 0 && <div className="w-16 h-24 border border-dashed border-white/20 rounded-lg"></div>}
+                                    <div className={`flex mt-2 min-h-[80px] ${alignRight ? 'justify-end' : 'justify-start'}`}>
+                                        {p.cards?.length === 0 && <div className="w-14 h-20 border border-dashed border-white/20 rounded-lg"></div>}
                                         {p.cards?.map((c, i) => (
-                                            <div key={i} style={{ animationDelay: `${i * 0.1}s` }} className="animate-card-deal opacity-0">
+                                            <div key={i} style={{ animationDelay: `${i * 0.1}s`, marginLeft: i > 0 ? '-18px' : '0', zIndex: i }} className="animate-card-deal opacity-0 relative">
                                                 <Card card={c} />
                                             </div>
                                         ))}
                                     </div>
-                                    {p.cards?.length > 0 && <div className="mt-2 bg-black/60 px-3 rounded-full text-sm font-bold animate-pop-in">{p.score}</div>}
-                                    
-                                    {p.status === 'bust' && <div className="mt-1 text-red-500 font-bold bg-black/80 px-2 rounded animate-pop-in">BUST</div>}
-                                    {p.status === 'stood' && <div className="mt-1 text-blue-300 font-bold bg-black/80 px-2 rounded animate-pop-in">STOOD</div>}
-                                    {p.result && <div className={`mt-1 font-bold bg-black/80 px-2 py-1 rounded animate-pop-in ${p.result.includes('Win') ? 'text-yellow-400' : 'text-slate-400'}`}>{p.result}</div>}
+                                    {p.cards?.length > 0 && <div className={`mt-1 bg-black/60 px-3 rounded-full text-sm font-bold animate-pop-in ${alignRight ? 'self-end' : 'self-start'}`}>{p.score}</div>}
+                                    {p.status === 'bust'  && <div className={`mt-1 text-red-500 font-bold bg-black/80 px-2 rounded animate-pop-in ${alignRight ? 'self-end' : 'self-start'}`}>BUST</div>}
+                                    {p.status === 'stood' && <div className={`mt-1 text-blue-300 font-bold bg-black/80 px-2 rounded animate-pop-in ${alignRight ? 'self-end' : 'self-start'}`}>STOOD</div>}
+                                    {p.result && <div className={`mt-1 font-bold bg-black/80 px-2 py-1 rounded animate-pop-in ${alignRight ? 'self-end' : 'self-start'} ${p.result.includes('Win') ? 'text-yellow-400' : 'text-slate-400'}`}>{p.result}</div>}
                                 </div>
-                            ))}
-                        </div>
+                            );
 
-                        <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex flex-col items-center z-20 w-full">
-                            
-                            {myPlayer.result && (
-                                <div className={`absolute -top-16 text-2xl sm:text-4xl font-black uppercase tracking-widest drop-shadow-[0_5px_5px_rgba(0,0,0,1)] animate-pop-in ${myPlayer.result.includes('Win') ? 'text-yellow-400' : myPlayer.result === 'Push' ? 'text-blue-300' : 'text-red-500'}`}>
-                                    {myPlayer.result}
+                            const EmptySeat = () => (
+                                <div className="w-14 h-20 border border-dashed border-white/10 rounded-lg opacity-30"></div>
+                            );
+
+                            return (
+                                <>
+                                {/* LEFT COLUMN — opponents only */}
+                                <div className="flex flex-col justify-around items-start px-2 sm:px-4 py-8 min-w-[110px] sm:min-w-[140px] z-10">
+                                    {leftPlayers.map(([uid, p]) => (
+                                        <OpponentSeat key={uid} uid={uid} p={p} alignRight={false} />
+                                    ))}
+                                    {leftPlayers.length === 0 && <EmptySeat />}
+                                </div>
+
+                                {/* CENTER COLUMN — dealer only */}
+                                <div className="flex-1 flex flex-col items-center justify-center py-8 px-2 relative">
+                                    <div className="flex flex-col items-center">
+                                        <div className="text-amber-200/80 uppercase tracking-widest font-bold mb-4 text-xs sm:text-sm border-b border-amber-500/30 pb-1 text-center">Dealer Must Draw to 16, Stand on 17</div>
+                                        <div className="flex justify-center mb-2 z-10 relative">
+                                            {roomData.dealerCards?.length === 0 && roomData.status === 'waiting' && (
+                                                <div className="w-16 h-24 sm:w-20 sm:h-28 border-2 border-dashed border-white/20 rounded-lg"></div>
+                                            )}
+                                            {roomData.dealerCards?.map((card, idx) => (
+                                                <div key={idx} style={{ zIndex: idx, animationDelay: `${idx * 0.15}s`, marginLeft: idx > 0 ? '-20px' : '0' }} className="relative animate-card-deal opacity-0">
+                                                    <Card card={card} hidden={roomData.status === 'playing' && idx === 1} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {roomData.dealerCards?.length > 0 && (
+                                            <div className="bg-black/60 px-4 py-1 rounded-full text-white font-bold border border-white/10 shadow-lg animate-pop-in">
+                                                {visibleDealerScore}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>{/* end center column */}
+
+                                {/* RIGHT COLUMN — opponents only */}
+                                <div className="flex flex-col justify-around items-end px-2 sm:px-4 py-8 min-w-[110px] sm:min-w-[140px] z-10">
+                                    {rightPlayers.map(([uid, p]) => (
+                                        <OpponentSeat key={uid} uid={uid} p={p} alignRight={true} />
+                                    ))}
+                                    {rightPlayers.length === 0 && <EmptySeat />}
+                                </div>
+                                </>
+                            );
+                        })()}
+                    </div>{/* end poker-table 3-col */}
+
+                    {/* ── CONTROLS PANEL (outside table, full-width bottom) ── */}
+                    <div className="w-full max-w-lg mx-auto mt-3 mb-2 px-2">
+
+                        {/* My cards */}
+                        <div className="flex justify-center mb-3">
+                            {myPlayer.cards?.length === 0 && (
+                                <div className="flex space-x-4">
+                                    <div className="w-20 h-28 border-2 border-dashed border-white/20 rounded-lg bg-black/20"></div>
+                                    <div className="w-20 h-28 border-2 border-dashed border-white/20 rounded-lg bg-black/20"></div>
                                 </div>
                             )}
-
-                            <div className="flex space-x-[-20px] sm:space-x-[-30px] justify-center mb-4 transition-all duration-300">
-                                {myPlayer.cards?.length === 0 && (
-                                    <div className="flex space-x-4">
-                                        <div className="w-20 h-28 border-2 border-dashed border-white/30 rounded-lg bg-black/20"></div>
-                                        <div className="w-20 h-28 border-2 border-dashed border-white/30 rounded-lg bg-black/20"></div>
-                                    </div>
-                                )}
+                            <div className="flex">
                                 {myPlayer.cards?.map((card, idx) => (
-                                    <div key={idx} style={{ zIndex: idx, animationDelay: `${idx * 0.15}s` }} className="relative animate-card-deal opacity-0">
+                                    <div key={idx} style={{ animationDelay: `${idx * 0.15}s`, marginLeft: idx > 0 ? '-24px' : '0', zIndex: idx }} className="animate-card-deal opacity-0 relative">
                                         <div className="hover:-translate-y-4 transition-transform duration-300">
                                             <Card card={card} />
                                         </div>
                                     </div>
                                 ))}
                             </div>
-                            
-                            <div className="flex items-center space-x-4 mb-4">
-                                <div className="bg-black/70 px-6 py-2 rounded-full border border-white/20 shadow-[0_0_15px_rgba(0,0,0,0.5)] transition-colors">
-                                    <span className="text-slate-400 mr-2 text-sm uppercase">Score</span>
-                                    <span className={`text-2xl font-bold transition-colors ${myPlayer.score > 21 ? 'text-red-500' : 'text-white'}`}>{myPlayer.score || '-'}</span>
-                                </div>
-                                {myPlayer.currentBet > 0 && (
-                                    <div className="bg-amber-900/80 px-4 py-2 rounded-full border border-amber-500/50 flex items-center shadow-[0_0_15px_rgba(0,0,0,0.5)] animate-pop-in">
-                                        <div className="w-4 h-4 rounded-full bg-blue-500 mr-2 border border-white border-dashed"></div>
-                                        <span className="font-bold text-amber-100">${myPlayer.currentBet}</span>
-                                    </div>
-                                )}
+                        </div>
+
+                        {/* Score + bet row */}
+                        {myPlayer.result && (
+                            <div className={`text-center text-2xl font-black uppercase tracking-widest drop-shadow-[0_4px_4px_rgba(0,0,0,1)] animate-pop-in mb-2 ${myPlayer.result.includes('Win') ? 'text-yellow-400' : myPlayer.result === 'Push' ? 'text-blue-300' : 'text-red-500'}`}>
+                                {myPlayer.result}
                             </div>
-                            
-                            <div className="bg-slate-900/90 p-3 sm:p-4 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-sm w-11/12 max-w-md flex justify-center space-x-3 transition-all duration-300">
+                        )}
+                        <div className="flex items-center justify-center space-x-3 mb-2">
+                            <div className="bg-black/70 px-4 py-1.5 rounded-full border border-white/20">
+                                <span className="text-slate-400 mr-2 text-xs uppercase">Score</span>
+                                <span className={`text-lg font-bold ${myPlayer.score > 21 ? 'text-red-500' : 'text-white'}`}>{myPlayer.score || '-'}</span>
+                            </div>
+                            {myPlayer.currentBet > 0 && (
+                                <div className="bg-amber-900/80 px-3 py-1.5 rounded-full border border-amber-500/50 flex items-center animate-pop-in">
+                                    <div className="w-3 h-3 rounded-full bg-blue-500 mr-2 border border-white border-dashed"></div>
+                                    <span className="font-bold text-amber-100 text-sm">${myPlayer.currentBet}</span>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="bg-slate-900/95 p-3 sm:p-4 rounded-2xl border border-slate-700 shadow-2xl backdrop-blur-sm w-full flex justify-center transition-all duration-300">
+                            <div className="w-full flex flex-col space-y-2">
                                 
                                 {roomData.status === 'waiting' && (
                                     <div className="flex flex-col w-full">
@@ -1172,13 +1281,27 @@ service cloud.firestore {
                                         )}
 
                                         {!myPlayer.isReady ? (
-                                            <button onClick={async () => {
-                                                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'blackjack_rooms', roomCode);
-                                                await updateDoc(roomRef, { [`players.${user.uid}.isReady`]: true });
-                                            }} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex flex-col items-center">
-                                                <span>Ready</span>
-                                                <span className="text-xs font-normal opacity-80 mt-1">{readyTimeLeft}s remaining</span>
-                                            </button>
+                                            <div className="flex flex-col space-y-2">
+                                                <button onClick={async () => {
+                                                    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'blackjack_rooms', roomCode);
+                                                    await updateDoc(roomRef, { [`players.${user.uid}.isReady`]: true });
+                                                }} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex flex-col items-center">
+                                                    <span>Ready</span>
+                                                    <span className="text-xs font-normal opacity-80 mt-1">
+                                                        {myPlayer.chips < 10 && myPlayer.currentBet === 0
+                                                            ? `Going AFK in ${readyTimeLeft}s`
+                                                            : `Auto-leave in ${readyTimeLeft}s`}
+                                                    </span>
+                                                </button>
+                                                <div className="flex items-center space-x-2 px-1">
+                                                    <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-1 rounded-full transition-all duration-1000 ease-linear ${readyTimeLeft <= 10 ? 'bg-red-500' : readyTimeLeft <= 20 ? 'bg-amber-400' : 'bg-green-500'}`}
+                                                            style={{ width: `${(readyTimeLeft / 30) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ) : (
                                             <div className="flex flex-col items-center py-4 space-y-4">
                                                 <div className="loader-hourglass scale-75">
@@ -1193,12 +1316,25 @@ service cloud.firestore {
 
                                 {roomData.status === 'playing' && myPlayer.status === 'playing' && (
                                     <>
-                                        <button onClick={hit} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-6 rounded-xl uppercase shadow-[0_0_15px_rgba(22,163,74,0.3)] transition-transform active:scale-95">
-                                            Hit
-                                        </button>
-                                        <button onClick={stand} className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-xl uppercase shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-transform active:scale-95">
-                                            Stand
-                                        </button>
+                                        <div className="w-full flex flex-col space-y-2">
+                                            <div className="flex space-x-3">
+                                                <button onClick={hit} className="flex-1 bg-green-600 hover:bg-green-500 text-white font-bold py-4 px-6 rounded-xl uppercase shadow-[0_0_15px_rgba(22,163,74,0.3)] transition-transform active:scale-95">
+                                                    Hit
+                                                </button>
+                                                <button onClick={stand} className="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold py-4 px-6 rounded-xl uppercase shadow-[0_0_15px_rgba(220,38,38,0.3)] transition-transform active:scale-95">
+                                                    Stand
+                                                </button>
+                                            </div>
+                                            <div className="flex items-center justify-center space-x-2">
+                                                <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                                                    <div
+                                                        className={`h-1 rounded-full transition-all duration-1000 ease-linear ${actionTimeLeft <= 10 ? 'bg-red-500' : actionTimeLeft <= 20 ? 'bg-amber-400' : 'bg-green-500'}`}
+                                                        style={{ width: `${(actionTimeLeft / 30) * 100}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className={`text-xs font-bold w-8 text-right tabular-nums ${actionTimeLeft <= 10 ? 'text-red-400' : 'text-slate-400'}`}>{actionTimeLeft}s</span>
+                                            </div>
+                                        </div>
                                     </>
                                 )}
 
@@ -1215,9 +1351,20 @@ service cloud.firestore {
                                 {roomData.status === 'game_over' && (
                                     <div className="w-full flex flex-col space-y-2">
                                         {isHost ? (
-                                            <button onClick={resetForNextRound} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-lg transition-all">
-                                                Next Round
-                                            </button>
+                                            <div className="flex flex-col space-y-2">
+                                                <button onClick={resetForNextRound} className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-lg transition-all flex flex-col items-center">
+                                                    <span>Next Round</span>
+                                                    <span className="text-xs font-normal opacity-80 mt-1">Auto-starting in {nextRoundTimeLeft}s</span>
+                                                </button>
+                                                <div className="flex items-center space-x-2 px-1">
+                                                    <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
+                                                        <div
+                                                            className={`h-1 rounded-full transition-all duration-1000 ease-linear ${nextRoundTimeLeft <= 10 ? 'bg-red-500' : nextRoundTimeLeft <= 20 ? 'bg-amber-400' : 'bg-blue-500'}`}
+                                                            style={{ width: `${(nextRoundTimeLeft / 30) * 100}%` }}
+                                                        ></div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         ) : (
                                             <div className="flex flex-col items-center py-4 space-y-4">
                                                 <div className="loader-hourglass scale-75">
@@ -1230,12 +1377,10 @@ service cloud.firestore {
                                     </div>
                                 )}
 
-                            </div>
-                        </div>
+                            </div>{/* end controls inner */}
+                        </div>{/* end controls card */}
+                    </div>{/* end controls wrapper */}
 
-                    </div>
-
-                    {/* Fake Video Ad Modal */}
                     {isWatchingAd && (
                         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md animate-fade-in p-4">
                             <div className="bg-slate-900 border border-slate-700 p-4 sm:p-6 rounded-2xl max-w-3xl w-full flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)] relative">
