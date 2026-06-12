@@ -429,17 +429,25 @@ service cloud.firestore {
                     const q = query(roomsRef, where('isPrivate', '==', false), limit(10));
                     const querySnapshot = await getDocs(q);
                     
-                    let foundRoom = null;
+                    let bestRoom = null;
+                    let maxCurrentPlayers = -1;
+                    
                     querySnapshot.forEach((docSnap) => {
                         const data = docSnap.data();
-                        // Find a room that isn't full (e.g. less than 5 players) and hasn't started dealing yet
-                        if (Object.keys(data.players || {}).length < 5 && data.status === 'waiting') {
-                            foundRoom = data.id;
+                        const numPlayers = Object.keys(data.players || {}).length;
+
+                        // Find a room with less than 4 players that hasn't started dealing yet
+                        if (numPlayers < 4 && data.status === 'waiting') {
+                            // Prioritize the room closest to being full to get games started faster
+                            if (numPlayers > maxCurrentPlayers) {
+                                maxCurrentPlayers = numPlayers;
+                                bestRoom = data.id;
+                            }
                         }
                     });
 
-                    if (foundRoom) {
-                        await joinRoom(foundRoom);
+                    if (bestRoom) {
+                        await joinRoom(bestRoom);
                     } else {
                         await createRoom(false); // No open rooms found, host a new public one
                     }
@@ -458,6 +466,14 @@ service cloud.firestore {
                 try {
                     const snap = await getDoc(roomRef);
                     if (snap.exists()) {
+                        const data = snap.data();
+                        
+                        // Hard cap the room at 4 players (unless they are already in it and reconnecting)
+                        if (Object.keys(data.players || {}).length >= 4 && !data.players[user.uid]) {
+                            setError("This room is full (max 4 players).");
+                            return;
+                        }
+
                         await updateDoc(roomRef, {
                             [`players.${user.uid}`]: {
                                 name: playerName,
