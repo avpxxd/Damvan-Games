@@ -371,7 +371,39 @@ service cloud.firestore {
             const [isWatchingAd, setIsWatchingAd] = useState(false);
             const [adTimeLeft, setAdTimeLeft] = useState(10);
             const [currentAdUrl, setCurrentAdUrl] = useState(''); // Tracks which video is playing
+            const [readyTimeLeft, setReadyTimeLeft] = useState(15);
             
+            // Ready Timer Effect
+            useEffect(() => {
+                let interval;
+                const myPlayer = roomData?.players?.[user?.uid];
+                
+                if (roomData?.status === 'waiting' && myPlayer && !myPlayer.isReady) {
+                    interval = setInterval(() => {
+                        setReadyTimeLeft((prev) => {
+                            if (prev <= 1) {
+                                leaveRoom();
+                                return 0;
+                            }
+                            return prev - 1;
+                        });
+                    }, 1000);
+                } else {
+                    setReadyTimeLeft(15);
+                }
+
+                return () => clearInterval(interval);
+            }, [roomData?.status, roomData?.players?.[user?.uid]?.isReady]);
+
+            // Auto-start round effect
+            useEffect(() => {
+                if (!roomData || !user || roomData.hostId !== user.uid || roomData.status !== 'waiting') return;
+                const playersList = Object.values(roomData.players);
+                if (playersList.length > 0 && playersList.every(p => p.isReady)) {
+                    startRound();
+                }
+            }, [roomData, user]);
+
             // Ad Timer Effect
             useEffect(() => {
                 let timer;
@@ -451,7 +483,7 @@ service cloud.firestore {
                     const playersList = Object.values(roomData.players);
                     if (playersList.length === 0) return;
 
-                    const allDone = playersList.every(p => p.status === 'stood' || p.status === 'bust');
+                    const allDone = playersList.every(p => p.status === 'stood' || p.status === 'bust' || p.status === 'spectating');
                     
                     if (allDone) {
                         let currentDeck = [...roomData.deck];
@@ -523,7 +555,8 @@ service cloud.firestore {
                             status: 'waiting',
                             chips: 1000,
                             currentBet: 0,
-                            result: ''
+                            result: '',
+                            isReady: false
                         }
                     }
                 };
@@ -602,7 +635,8 @@ service cloud.firestore {
                                 status: 'waiting',
                                 chips: 1000,
                                 currentBet: 0,
-                                result: ''
+                                result: '',
+                                isReady: false
                             }
                         });
                         setRoomCode(upperCode);
@@ -702,14 +736,21 @@ service cloud.firestore {
                         }
                     }
                     
-                    updatedPlayers[uid].cards = [deck.pop(), deck.pop()];
-                    updatedPlayers[uid].score = calculateScore(updatedPlayers[uid].cards);
-                    updatedPlayers[uid].result = '';
-                    
-                    if (updatedPlayers[uid].score === 21) {
-                         updatedPlayers[uid].status = 'stood';
+                    if (updatedPlayers[uid].currentBet > 0) {
+                        updatedPlayers[uid].cards = [deck.pop(), deck.pop()];
+                        updatedPlayers[uid].score = calculateScore(updatedPlayers[uid].cards);
+                        updatedPlayers[uid].result = '';
+                        
+                        if (updatedPlayers[uid].score === 21) {
+                             updatedPlayers[uid].status = 'stood';
+                        } else {
+                             updatedPlayers[uid].status = 'playing';
+                        }
                     } else {
-                         updatedPlayers[uid].status = 'playing';
+                        updatedPlayers[uid].status = 'spectating';
+                        updatedPlayers[uid].cards = [];
+                        updatedPlayers[uid].score = 0;
+                        updatedPlayers[uid].result = '';
                     }
                 }
 
@@ -781,6 +822,7 @@ service cloud.firestore {
                     updatedPlayers[uid].status = 'waiting';
                     updatedPlayers[uid].currentBet = 0;
                     updatedPlayers[uid].result = '';
+                    updatedPlayers[uid].isReady = false;
                 }
 
                 const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'blackjack_rooms', roomCode);
@@ -990,7 +1032,7 @@ service cloud.firestore {
                             )}
                         </div>
 
-                        <div className="w-full flex justify-around px-4 sm:px-12 mt-20 sm:mt-10 mb-auto relative z-0">
+                        <div className="w-full flex justify-around px-4 sm:px-12 mt-72 sm:mt-64 mb-auto relative z-0">
                             {otherPlayers.map(([uid, p]) => (
                                 <div key={uid} className="flex flex-col items-center opacity-80 scale-90 transition-all duration-300 group">
                                     <div className="bg-black/50 px-3 py-1 rounded-t-lg text-sm text-center border-b-2 border-blue-500 min-w-[100px] relative">
@@ -1129,9 +1171,13 @@ service cloud.firestore {
                                             </>
                                         )}
 
-                                        {isHost ? (
-                                            <button onClick={startRound} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all">
-                                                Deal Cards
+                                        {!myPlayer.isReady ? (
+                                            <button onClick={async () => {
+                                                const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'blackjack_rooms', roomCode);
+                                                await updateDoc(roomRef, { [`players.${user.uid}.isReady`]: true });
+                                            }} className="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-xl uppercase tracking-widest shadow-[0_0_20px_rgba(22,163,74,0.4)] transition-all flex flex-col items-center">
+                                                <span>Ready</span>
+                                                <span className="text-xs font-normal opacity-80 mt-1">{readyTimeLeft}s remaining</span>
                                             </button>
                                         ) : (
                                             <div className="flex flex-col items-center py-4 space-y-4">
@@ -1139,7 +1185,7 @@ service cloud.firestore {
                                                     <div className="hourglass-top"></div>
                                                     <div className="hourglass-bottom"></div>
                                                 </div>
-                                                <div className="text-amber-400 tracking-wide animate-pulse">Waiting for host to deal...</div>
+                                                <div className="text-amber-400 tracking-wide animate-pulse">Waiting for other players...</div>
                                             </div>
                                         )}
                                     </div>
