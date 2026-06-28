@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.7.5</title>
+    <title>System Breach | Terminal v3.8.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -24,7 +24,34 @@
             overflow: hidden;
             display: flex;
             flex-direction: column;
+            transition: all 0.5s ease-in-out;
         }
+
+        /* Extra Hard Theme Overrides */
+        body.extra-hard {
+            --term-green: #ef4444; /* red-500 */
+            --glow: 0 0 15px rgba(239, 68, 68, 0.6);
+        }
+        body.extra-hard .crt-overlay {
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(50, 0, 0, 0.15) 50%), 
+                        linear-gradient(90deg, rgba(255, 0, 0, 0.05), rgba(255, 0, 0, 0.02), rgba(255, 0, 0, 0.03));
+        }
+        body.extra-hard .text-emerald-500 { color: #ef4444 !important; }
+        body.extra-hard .bg-emerald-500 { background-color: #ef4444 !important; }
+        body.extra-hard .border-emerald-500 { border-color: #ef4444 !important; }
+        body.extra-hard .border-emerald-900 { border-color: #7f1d1d !important; }
+        body.extra-hard .border-emerald-900\/20 { border-color: rgba(127, 29, 29, 0.2) !important; }
+        body.extra-hard .border-emerald-900\/30 { border-color: rgba(127, 29, 29, 0.3) !important; }
+        body.extra-hard .border-emerald-900\/50 { border-color: rgba(127, 29, 29, 0.5) !important; }
+        body.extra-hard .bg-emerald-950\/5 { background-color: rgba(69, 10, 10, 0.05) !important; }
+        body.extra-hard .bg-emerald-900\/20 { background-color: rgba(127, 29, 29, 0.2) !important; }
+        body.extra-hard .bg-emerald-900\/30 { background-color: rgba(127, 29, 29, 0.3) !important; }
+        body.extra-hard .text-emerald-400 { color: #f87171 !important; }
+        body.extra-hard .hover\:bg-emerald-900\/20:hover { background-color: rgba(127, 29, 29, 0.2) !important; }
+        body.extra-hard .hover\:border-emerald-500:hover { border-color: #ef4444 !important; }
+        body.extra-hard .hover\:bg-emerald-900\/30:hover { background-color: rgba(127, 29, 29, 0.3) !important; }
+        body.extra-hard .text-emerald-900 { color: #7f1d1d !important; }
+        body.extra-hard .bg-emerald-500\/20 { background-color: rgba(239, 68, 68, 0.2) !important; }
 
         .crt-overlay {
             position: fixed;
@@ -45,6 +72,10 @@
             position: absolute;
             bottom: 100%;
             animation: scanline 10s linear infinite;
+        }
+
+        body.extra-hard .scanline {
+            background: linear-gradient(0deg, rgba(0, 0, 0, 0) 0%, rgba(239, 68, 68, 0.05) 50%, rgba(0, 0, 0, 0) 100%);
         }
 
         @keyframes scanline {
@@ -78,7 +109,10 @@
         }
 
         .terminal-border { border: 1px solid rgba(16, 185, 129, 0.2); }
+        body.extra-hard .terminal-border { border-color: rgba(239, 68, 68, 0.2); }
         
+        .shadow-glow { box-shadow: var(--glow) !important; }
+
         .btn-action {
             background: rgba(16, 185, 129, 0.05);
             border: 1px solid rgba(16, 185, 129, 0.3);
@@ -86,11 +120,16 @@
             position: relative;
             overflow: hidden;
         }
+        body.extra-hard .btn-action {
+            background: rgba(239, 68, 68, 0.05);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
         .btn-action:hover:not(:disabled) {
             background: var(--term-green);
             color: black;
             box-shadow: var(--glow);
         }
+        body.extra-hard .btn-action:hover:not(:disabled) * { color: black !important; }
         .btn-action:active { transform: scale(0.95); }
         .btn-action:disabled { opacity: 0.2; cursor: not-allowed; filter: grayscale(1); }
 
@@ -105,12 +144,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        body.extra-hard .log-entry { border-left-color: rgba(239, 68, 68, 0.2); }
+
         @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
 
         #nuke-flash {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; opacity: 0; pointer-events: none; z-index: 2000;
         }
+        body.extra-hard #nuke-flash { background: #ef4444; }
 
         #identity-modal.hidden, #quota-modal.hidden { display: none; }
         .glitch-text { text-shadow: 1px 0 #ff0000, -1px 0 #0000ff; }
@@ -155,6 +197,7 @@
             border-bottom: 1px solid rgba(16, 185, 129, 0.1);
             font-size: 10px;
         }
+        body.extra-hard .leaderboard-item { border-bottom-color: rgba(239, 68, 68, 0.1); }
         .rank-badge {
             width: 16px;
             height: 16px;
@@ -166,9 +209,12 @@
             font-weight: 900;
             margin-right: 6px;
         }
+        body.extra-hard .rank-badge { background: rgba(239, 68, 68, 0.2); }
         .rank-1 { color: #fbbf24; background: rgba(251, 191, 36, 0.2); }
+        body.extra-hard .rank-1 { color: #fbbf24; background: rgba(251, 191, 36, 0.2); } /* Keep rank 1 yellow */
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 2px; }
+        body.extra-hard .custom-scroll::-webkit-scrollbar-thumb { background: rgba(239, 68, 68, 0.3); }
     </style>
 </head>
 <body>
@@ -217,7 +263,7 @@
             </div>
 
             <div class="pt-4 border-t border-emerald-900/20 text-[8px] opacity-30 text-center uppercase tracking-widest" id="node-id-display">
-                Node_ID: raid-vault-e67f7 // Interface v3.7.5
+                Node_ID: raid-vault-e67f7 // Interface v3.8.0
             </div>
         </div>
     </div>
@@ -297,7 +343,7 @@
 
         <div class="lg:col-span-2 flex flex-col gap-4 md:gap-6">
             <div id="vault-container" class="terminal-border rounded-xl p-4 md:p-8 bg-black/40 relative">
-                <div id="lock-indicators" class="flex justify-between mb-8 md:mb-12"></div>
+                <div id="lock-indicators" class="flex justify-center gap-2 md:gap-6 mb-8 md:mb-12 flex-wrap"></div>
                 <div id="hp-section" class="space-y-4">
                     <div class="flex justify-between items-end px-1">
                         <span id="lock-label" class="text-sm md:text-lg font-black italic uppercase text-white">Target: Lock_1</span>
@@ -331,9 +377,6 @@
     </main>
 
     <script type="module">
-        // Using type="module" automatically scopes all variables to this file, 
-        // preventing users from simply typing `state.profile.points = 9999` in the browser console.
-        
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, linkWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -349,7 +392,6 @@
         };
         
         const appId = "raid-vault-e67f7"; 
-        const POINT_TICK_MS = 1 * 60 * 1000; 
         const VAULT_COOLDOWN_MS = 5 * 60 * 1000; 
         const ACTION_COOLDOWN_MS = 5000;
         const STARTING_CREDITS = 20;
@@ -383,17 +425,18 @@
         };
 
         const ATTACKS = [
-            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.1 },
-            { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 0.5 },
-            { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 1.0 },
-            { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 5.0 },
-            { id: 'bomb', name: 'Bomb', cost: 50, dmg: [100, 500], icon: 'bomb', data: 20.0 },
-            { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 100.0 },
+            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.0 }, // Nerfed to 0 to stop macro farming
+            { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 2.0 },
+            { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 6.0 },
+            { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 20.0 },
+            { id: 'bomb', name: 'Bomb', cost: 50, dmg: [100, 500], icon: 'bomb', data: 75.0 },
+            { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 180.0 },
         ];
 
         const HeistLogic = (() => {
             let state = { user: null, profile: null, heist: null, quotaReached: false, leaderboard: [] };
             let lastLocalAction = 0; 
+            let lastLocalTickTime = 0; // Local rate limiter for point generation
             let isUpdatingRefill = false;
             let unsubs = [];
 
@@ -485,13 +528,18 @@
                         hData.locks[lIdx].hp = Math.max(0, hData.locks[lIdx].hp - dmg);
                         if (hData.locks[lIdx].hp === 0) {
                             hData.locks[lIdx].cracked = true;
-                            if (lIdx < 3) hData.currentLock++;
-                            else { hData.isCracked = true; hData.breachTime = Date.now(); hData.lastWinner = { name: pData.displayName, method: atk.name }; }
+                            // Ensure dynamic lock scaling is supported
+                            if (lIdx < hData.locks.length - 1) {
+                                hData.currentLock++;
+                            } else { 
+                                hData.isCracked = true; 
+                                hData.breachTime = Date.now(); 
+                                hData.lastWinner = { name: pData.displayName, method: atk.name }; 
+                            }
                         }
                         
                         tx.update(heistRef, hData);
                         
-                        // Use increment and serverTimestamp to prevent easy console payload spoofing
                         tx.update(profRef, { 
                             points: increment(-atk.cost), 
                             dataGB: increment(atk.data), 
@@ -520,7 +568,14 @@
                 if (!state.profile || state.quotaReached) return;
                 if (el.credits) el.credits.innerText = state.profile.points;
                 if (el.dataGB) el.dataGB.innerText = (state.profile.dataGB || 0).toFixed(1);
-                if (el.date) el.date.innerText = `Protocol // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
+                
+                if (el.date) {
+                    if (state.heist?.isExtraHard) {
+                        el.date.innerHTML = `<span class="text-red-500 font-black animate-pulse">!! EXTRA HARD PROTOCOL !!</span> // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
+                    } else {
+                        el.date.innerText = `Protocol // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
+                    }
+                }
                 
                 const now = Date.now();
                 const onCooldown = (now - lastLocalAction) < ACTION_COOLDOWN_MS;
@@ -550,26 +605,41 @@
 
             function renderHeist() {
                 const h = state.heist; if (!h) return;
-                handleHeistRewards(h);
+
+                // Handle theme swapping for Extra Hard mode
+                if (h.isExtraHard) {
+                    document.body.classList.add('extra-hard');
+                } else {
+                    document.body.classList.remove('extra-hard');
+                }
+
                 if (el.indicators) {
+                    const lockSize = h.locks.length > 5 ? 'w-6 h-6 md:w-8 md:h-8' : 'w-8 h-8';
+                    const iconSize = h.locks.length > 5 ? '12' : '14';
+
                     el.indicators.innerHTML = h.locks.map((l, i) => `
                         <div class="flex flex-col items-center">
-                            <div class="w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all ${
-                                l.cracked ? 'bg-emerald-500 border-emerald-500 text-black shadow-[0_0_15px_rgba(16,185,129,0.3)]' : 
+                            <div class="${lockSize} rounded-full border-2 flex items-center justify-center transition-all ${
+                                l.cracked ? 'bg-emerald-500 border-emerald-500 text-black shadow-glow' : 
                                 i === h.currentLock ? 'border-yellow-500 text-yellow-500 animate-pulse' : 'border-emerald-900 opacity-20'
                             }">
-                                <i data-lucide="${l.cracked ? 'check' : 'lock'}" size="14"></i>
+                                <i data-lucide="${l.cracked ? 'check' : 'lock'}" size="${iconSize}"></i>
                             </div>
                             <span class="text-[8px] font-bold mt-1 uppercase">L-${i+1}</span>
                         </div>`).join('');
                 }
-                if (h.isCracked) { if (el.hpSection) el.hpSection.classList.add('hidden'); if (el.crackedMsg) el.crackedMsg.classList.remove('hidden'); }
-                else {
-                    if (el.hpSection) el.hpSection.classList.remove('hidden'); if (el.crackedMsg) el.crackedMsg.classList.add('hidden');
+                if (h.isCracked) { 
+                    if (el.hpSection) el.hpSection.classList.add('hidden'); 
+                    if (el.crackedMsg) el.crackedMsg.classList.remove('hidden'); 
+                } else {
+                    if (el.hpSection) el.hpSection.classList.remove('hidden'); 
+                    if (el.crackedMsg) el.crackedMsg.classList.add('hidden');
                     const c = h.locks[h.currentLock];
                     if (el.hpBar) { el.hpBar.max = c.maxHp; el.hpBar.value = c.hp; }
                     if (el.hpLabel) el.hpLabel.innerText = `${c.hp} / ${c.maxHp} HP`;
-                    if (el.lockLabel) el.lockLabel.innerText = `Target: Lock_${h.currentLock + 1}`;
+                    if (el.lockLabel) {
+                        el.lockLabel.innerText = `Target: Lock_${h.currentLock + 1} ${h.isExtraHard ? '[EXTREME]' : ''}`;
+                    }
                 }
                 if (el.winner && h.lastWinner) {
                     el.winner.innerHTML = `
@@ -580,27 +650,6 @@
                         </div>`;
                 }
                 lucide.createIcons(); refreshUI();
-            }
-
-            async function handleHeistRewards(h) {
-                if (!state.user || !state.profile || state.quotaReached) return;
-                let rewardGB = 0; let log = [...(state.profile.rewardLog || [])];
-                h.locks.forEach((lock, idx) => {
-                    const key = `lock_v5_${h.breachTime || 0}_${idx}`;
-                    if (lock.cracked && h.participants?.[idx]?.includes(state.user.uid) && !log.includes(key)) { rewardGB += 30; log.push(key); }
-                });
-                const breachKey = `breach_v5_${h.breachTime}`;
-                if (h.isCracked && h.breachTime > 0 && !log.includes(breachKey)) { rewardGB += 50; log.push(breachKey); }
-                if (rewardGB > 0) {
-                    try {
-                        const profRef = doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile');
-                        const pubRankRef = doc(db, 'artifacts', appId, 'public', 'data', 'leaderboard', state.user.uid);
-                        await updateDoc(profRef, { dataGB: increment(rewardGB), rewardLog: log });
-                        await updateDoc(pubRankRef, { dataGB: increment(rewardGB) });
-                    } catch(e) {
-                        handleQuotaError(e);
-                    }
-                }
             }
 
             function renderLeaderboard(members) {
@@ -618,12 +667,26 @@
 
             async function resetHeist(ref) {
                 if(state.quotaReached) return;
-                const locks = Array.from({ length: 4 }, () => {
+                
+                // 15% chance for Extra Hard mode
+                const isExtraHard = Math.random() < 0.15;
+                const numLocks = isExtraHard ? Math.floor(Math.random() * 3) + 6 : 4; // 6 to 8 locks if hard, else 4
+
+                const locks = Array.from({ length: numLocks }, () => {
                     const hp = Math.floor(Math.random() * 501) + 500;
                     return { hp, maxHp: hp, cracked: false };
                 });
+
                 try {
-                    await setDoc(ref, { locks, currentLock: 0, isCracked: false, breachTime: 0, participants: {}, lastWinner: state.heist?.lastWinner || null });
+                    await setDoc(ref, { 
+                        locks, 
+                        currentLock: 0, 
+                        isCracked: false, 
+                        breachTime: 0, 
+                        participants: {}, 
+                        lastWinner: state.heist?.lastWinner || null,
+                        isExtraHard: isExtraHard
+                    });
                 } catch(e) {
                     handleQuotaError(e);
                 }
@@ -770,16 +833,18 @@
                     
                     const now = Date.now();
                     if (state.profile && !isUpdatingRefill) {
-                        // We use local time strictly to track the visual UI counter.
-                        // Real server-side validation needs Firebase Rules.
                         const lastTickObj = state.profile.lastTick;
-                        // Handle both standard JS Date (local fallback) and Firestore Timestamps
                         const last = (lastTickObj && lastTickObj.toMillis) ? lastTickObj.toMillis() : (lastTickObj || now);
                         
-                        if (now >= last + POINT_TICK_MS) {
+                        // Exploit Patch: Strictly enforce 60000ms delay locally and via server timestamp diff.
+                        // We removed POINT_TICK_MS to prevent users from reassigning it via DevTools.
+                        const timeSinceServerTick = now - last;
+                        const timeSinceLocalTick = now - lastLocalTickTime;
+
+                        if (timeSinceServerTick >= 60000 && timeSinceLocalTick >= 59000) {
                             isUpdatingRefill = true;
+                            lastLocalTickTime = now; // Enforce local throttle
                             try { 
-                                // increment() paired with serverTimestamp() stops local clock hacks
                                 await updateDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile'), { 
                                     points: increment(1), 
                                     lastTick: serverTimestamp() 
@@ -790,7 +855,7 @@
                                 isUpdatingRefill = false; 
                             }
                         } else {
-                            const diff = Math.max(0, (last + POINT_TICK_MS) - now);
+                            const diff = Math.max(0, (last + 60000) - now);
                             if (el.timer) el.timer.innerText = `${Math.floor(diff/60000)}:${Math.floor((diff%60000)/1000).toString().padStart(2, '0')}`;
                         }
                     }
