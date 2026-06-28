@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v4.0.0</title>
+    <title>System Breach | Terminal v3.7.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -167,21 +167,11 @@
             margin-right: 6px;
         }
         .rank-1 { color: #fbbf24; background: rgba(251, 191, 36, 0.2); }
-        
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(16, 185, 129, 0.3); border-radius: 2px; }
-
-        /* Fix for scrollbars in top stats block */
-        .hide-scrollbars {
-            -ms-overflow-style: none; /* IE and Edge */
-            scrollbar-width: none; /* Firefox */
-        }
-        .hide-scrollbars::-webkit-scrollbar {
-            display: none; /* Chrome, Safari and Opera */
-        }
     </style>
 </head>
-<body class="">
+<body>
     <div class="crt-overlay"></div>
     <div class="scanline"></div>
     <div id="nuke-flash"></div>
@@ -232,6 +222,7 @@
         </div>
     </div>
 
+    <!-- Quota Exceeded Modal -->
     <div id="quota-modal" class="fixed inset-0 bg-black/90 backdrop-grayscale z-[5000] hidden items-center justify-center p-6">
         <div class="max-w-md w-full border border-zinc-800 bg-zinc-950 p-8 space-y-6 text-center shadow-2xl relative overflow-hidden">
             <div class="absolute top-0 left-0 w-full h-1 bg-zinc-800"></div>
@@ -248,6 +239,7 @@
         </div>
     </div>
 
+    <!-- UI Header -->
     <header class="p-3 md:p-4 border-b terminal-border flex flex-col md:flex-row justify-between items-center gap-3 bg-zinc-950 shrink-0">
         <div class="flex items-center gap-3 w-full md:w-auto">
             <i data-lucide="shield-alert" class="text-emerald-500 w-5 h-5 md:w-6 md:h-6 shrink-0"></i>
@@ -257,7 +249,7 @@
             </div>
         </div>
 
-        <div class="flex gap-2 items-stretch h-[48px] md:h-[52px] w-full md:w-auto overflow-x-auto overflow-y-hidden hide-scrollbars">
+        <div class="flex gap-2 items-stretch h-[48px] md:h-[52px] w-full md:w-auto overflow-x-auto custom-scroll pb-1 -mb-1">
             <button id="save-progress-btn" class="stat-box flex-1 min-w-[140px] border-emerald-500/30 hover:bg-emerald-900/20 hover:border-emerald-500 transition-all cursor-pointer disabled:opacity-40 disabled:border-emerald-900/30 disabled:hover:bg-transparent disabled:cursor-default group flex flex-col justify-center shrink-0" disabled>
                 <div class="stat-label group-hover:text-emerald-400 transition-colors">Account</div>
                 <div id="save-progress-text" class="stat-value text-[9px] md:text-[10px] flex items-center gap-1.5 uppercase text-emerald-500 whitespace-nowrap">
@@ -271,6 +263,10 @@
             <div class="stat-box flex-1 min-w-[100px] md:min-w-[110px] shrink-0">
                 <div class="stat-label">Extracted</div>
                 <div class="stat-value text-blue-400 text-right"><span id="ui-data-gb">--</span><span class="text-[9px] ml-1 uppercase">GB</span></div>
+            </div>
+            <div class="stat-box flex-1 min-w-[80px] md:min-w-[90px] shrink-0">
+                <div class="stat-label">Refill</div>
+                <div class="stat-value text-zinc-500 text-right" id="ui-timer">--:--</div>
             </div>
         </div>
     </header>
@@ -335,11 +331,13 @@
     </main>
 
     <script type="module">
+        // Using type="module" automatically scopes all variables to this file, 
+        // preventing users from simply typing `state.profile.points = 9999` in the browser console.
+        
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, linkWithPopup } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, increment, runTransaction, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCizYJ7xFmY5Neu6gD9JAkVf1LT5_Zskk8",
             authDomain: "raid-vault-e67f7.firebaseapp.com",
@@ -351,12 +349,14 @@
         };
         
         const appId = "raid-vault-e67f7"; 
+        const POINT_TICK_MS = 1 * 60 * 1000; 
         const VAULT_COOLDOWN_MS = 5 * 60 * 1000; 
         const ACTION_COOLDOWN_MS = 5000;
         const STARTING_CREDITS = 20;
 
         const el = {
             credits: document.getElementById('ui-credits'),
+            timer: document.getElementById('ui-timer'),
             date: document.getElementById('ui-date'),
             hpBar: document.getElementById('hp-bar'),
             hpLabel: document.getElementById('hp-label'),
@@ -383,17 +383,18 @@
         };
 
         const ATTACKS = [
-            { id: 'guess', name: 'Guess', cost: 5, dmg: [1, 5], icon: 'target', data: 0.1 },
-            { id: 'hit', name: 'Hit', cost: 20, dmg: [10, 20], icon: 'zap', data: 0.5 },
-            { id: 'drill', name: 'Drill', cost: 50, dmg: [20, 50], icon: 'cpu', data: 1.0 },
-            { id: 'hack', name: 'Hack', cost: 150, dmg: [50, 150], icon: 'terminal', data: 5.0 },
-            { id: 'bomb', name: 'Bomb', cost: 250, dmg: [100, 500], icon: 'bomb', data: 20.0 },
-            { id: 'nuke', name: 'Nuke', cost: 500, dmg: [1000, 1000], icon: 'radiation', data: 100.0 },
+            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.1 },
+            { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 0.5 },
+            { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 1.0 },
+            { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 5.0 },
+            { id: 'bomb', name: 'Bomb', cost: 50, dmg: [100, 500], icon: 'bomb', data: 20.0 },
+            { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 100.0 },
         ];
 
         const HeistLogic = (() => {
             let state = { user: null, profile: null, heist: null, quotaReached: false, leaderboard: [] };
             let lastLocalAction = 0; 
+            let isUpdatingRefill = false;
             let unsubs = [];
 
             const SECURITY_BLACKLIST = [/fuck/i, /shit/i, /nigger/i, /faggot/i, /cunt/i, /bitch/i, /asshole/i, /dick/i, /pussy/i, /bastard/i, /slut/i, /whore/i, /rape/i, /porn/i, /nigga/i, /retard/i, /cock/i];
@@ -419,7 +420,7 @@
 
             function escapeHTML(str) {
                 if (!str) return '';
-                return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+                return String(str).replace(/&/g, '&lt;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
             }
 
             function createActionButtons() {
@@ -450,17 +451,11 @@
             }
 
             async function executeAttack(atk) {
-                if (state.quotaReached || !state.user || !state.heist || state.heist.isCracked || !state.profile) return;
-                
+                if (state.quotaReached || !state.user || !state.heist || state.heist.isCracked || !state.profile || state.profile.points < atk.cost) return;
                 const now = Date.now();
-                const lastTickLocal = state.profile.lastTick || now;
-                const earnedPoints = Math.floor((now - lastTickLocal) / 1000);
-                const currentPoints = state.profile.points + earnedPoints;
                 
-                if (currentPoints < atk.cost) return;
-
-                const serverLast = state.profile.lastActionAt || 0;
-                if (now - lastLocalAction < ACTION_COOLDOWN_MS || now - serverLast < ACTION_COOLDOWN_MS) return;
+                // Block rapid-fire clickers on client-side
+                if (now - lastLocalAction < ACTION_COOLDOWN_MS) return;
 
                 lastLocalAction = now;
                 refreshUI();
@@ -475,16 +470,11 @@
                         const hSnap = await tx.get(heistRef);
                         const pSnap = await tx.get(profRef);
                         if (!hSnap.exists() || !pSnap.exists()) return;
+                        
                         const hData = hSnap.data();
                         const pData = pSnap.data();
                         
-                        const transactionNow = Date.now();
-                        const pLastTick = pData.lastTick || transactionNow;
-                        const pEarned = Math.floor((transactionNow - pLastTick) / 1000);
-                        const pTotalPoints = pData.points + pEarned;
-
-                        if (transactionNow - (pData.lastActionAt || 0) < ACTION_COOLDOWN_MS) throw "RATE_LIMIT";
-                        if (pTotalPoints < atk.cost) throw "FUNDS";
+                        if (pData.points < atk.cost) throw "FUNDS";
                         if (hData.isCracked) return;
 
                         const lIdx = hData.currentLock;
@@ -498,16 +488,22 @@
                             if (lIdx < 3) hData.currentLock++;
                             else { hData.isCracked = true; hData.breachTime = Date.now(); hData.lastWinner = { name: pData.displayName, method: atk.name }; }
                         }
+                        
                         tx.update(heistRef, hData);
-                        // Reset lastTick to capture the exact time points were synchronized
-                        tx.update(profRef, { points: pTotalPoints - atk.cost, dataGB: increment(atk.data), lastActionAt: transactionNow, lastTick: transactionNow });
+                        
+                        // Use increment and serverTimestamp to prevent easy console payload spoofing
+                        tx.update(profRef, { 
+                            points: increment(-atk.cost), 
+                            dataGB: increment(atk.data), 
+                            lastActionAt: serverTimestamp() 
+                        });
                         tx.update(pubRankRef, { dataGB: increment(atk.data), displayName: pData.displayName });
                     });
                     
                     refreshUI();
                     await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'activity'), { 
                         msg: `Agent ${state.profile.displayName} used ${atk.name}: -${dmg} HP`, 
-                        time: Date.now(), 
+                        time: serverTimestamp(), 
                         uid: state.user.uid 
                     });
                     
@@ -522,24 +518,17 @@
 
             function refreshUI() {
                 if (!state.profile || state.quotaReached) return;
-                
-                // Calculate dynamically earned points based on time passed to prevent excessive database writes
-                const now = Date.now();
-                const lastTick = state.profile.lastTick || now;
-                const earnedPoints = Math.floor((now - lastTick) / 1000);
-                const currentPoints = state.profile.points + earnedPoints;
-
-                if (el.credits) el.credits.innerText = currentPoints;
+                if (el.credits) el.credits.innerText = state.profile.points;
                 if (el.dataGB) el.dataGB.innerText = (state.profile.dataGB || 0).toFixed(1);
                 if (el.date) el.date.innerText = `Protocol // ${state.heist?.isCracked ? 'BREACHED' : 'OPERATIONAL'}`;
                 
-                const serverLast = state.profile.lastActionAt || 0;
-                const onCooldown = (now - lastLocalAction) < ACTION_COOLDOWN_MS || (now - serverLast) < ACTION_COOLDOWN_MS;
+                const now = Date.now();
+                const onCooldown = (now - lastLocalAction) < ACTION_COOLDOWN_MS;
 
                 ATTACKS.forEach(a => {
                     const btn = document.getElementById(`btn-${a.id}`);
                     if (!btn) return;
-                    btn.disabled = currentPoints < a.cost || state.heist?.isCracked || onCooldown;
+                    btn.disabled = state.profile.points < a.cost || state.heist?.isCracked || onCooldown;
                     const label = btn.querySelector('.cost-label');
                     if (label) label.innerText = onCooldown ? 'RELOADING' : `${a.cost} CRED`;
                 });
@@ -701,7 +690,14 @@
                                     else { if (el.nameModal) el.nameModal.classList.add('hidden'); if (el.agentId) el.agentId.innerText = `ID: ${escapeHTML(data.displayName).toUpperCase()}`; }
                                     state.profile = data; refreshUI();
                                 } else {
-                                    setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), { points: STARTING_CREDITS, dataGB: 0, rewardLog: [], lastTick: Date.now(), displayName: '', lastActionAt: 0 }).catch(handleQuotaError);
+                                    setDoc(doc(db, 'artifacts', appId, 'users', u.uid, 'state', 'profile'), { 
+                                        points: STARTING_CREDITS, 
+                                        dataGB: 0, 
+                                        rewardLog: [], 
+                                        lastTick: serverTimestamp(), 
+                                        displayName: '', 
+                                        lastActionAt: serverTimestamp() 
+                                    }).catch(handleQuotaError);
                                 }
                             }, handleQuotaError));
 
@@ -720,7 +716,10 @@
 
                             unsubs.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'activity'), (snap) => {
                                 const logs = snap.docs.map(doc => doc.data()).sort((a, b) => a.time - b.time);
-                                if (el.logs) el.logs.innerHTML = logs.slice(-30).map(log => `<div class="log-entry"><span class="opacity-30">[${new Date(log.time).toLocaleTimeString([], {hour12:false})}]</span> ${escapeHTML(log.msg)}</div>`).join('');
+                                if (el.logs) el.logs.innerHTML = logs.slice(-30).map(log => {
+                                    const t = log.time && log.time.toDate ? log.time.toDate() : new Date();
+                                    return `<div class="log-entry"><span class="opacity-30">[${t.toLocaleTimeString([], {hour12:false})}]</span> ${escapeHTML(log.msg)}</div>`;
+                                }).join('');
                             }, handleQuotaError));
 
                             unsubs.push(onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'leaderboard'), (snap) => {
@@ -766,17 +765,41 @@
                         handleQuotaError(e);
                     }
                 },
-                tick: () => {
+                tick: async () => {
                     if (state.quotaReached) return; 
                     
-                    refreshUI(); // Refreshes client-side visual counter
-
+                    const now = Date.now();
+                    if (state.profile && !isUpdatingRefill) {
+                        // We use local time strictly to track the visual UI counter.
+                        // Real server-side validation needs Firebase Rules.
+                        const lastTickObj = state.profile.lastTick;
+                        // Handle both standard JS Date (local fallback) and Firestore Timestamps
+                        const last = (lastTickObj && lastTickObj.toMillis) ? lastTickObj.toMillis() : (lastTickObj || now);
+                        
+                        if (now >= last + POINT_TICK_MS) {
+                            isUpdatingRefill = true;
+                            try { 
+                                // increment() paired with serverTimestamp() stops local clock hacks
+                                await updateDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile'), { 
+                                    points: increment(1), 
+                                    lastTick: serverTimestamp() 
+                                }); 
+                            } catch(e) { 
+                                handleQuotaError(e);
+                            } finally { 
+                                isUpdatingRefill = false; 
+                            }
+                        } else {
+                            const diff = Math.max(0, (last + POINT_TICK_MS) - now);
+                            if (el.timer) el.timer.innerText = `${Math.floor(diff/60000)}:${Math.floor((diff%60000)/1000).toString().padStart(2, '0')}`;
+                        }
+                    }
                     if (state.heist?.isCracked && state.heist.breachTime > 0) {
-                        const now = Date.now();
                         const diff = Math.max(0, (state.heist.breachTime + VAULT_COOLDOWN_MS) - now);
                         if (el.resetCountdown) el.resetCountdown.innerText = `${Math.floor(diff / 60000)}:${Math.floor((diff % 60000) / 1000).toString().padStart(2, '0')}`;
                         if (diff <= 0) resetHeist(doc(db, 'artifacts', appId, 'public', 'data', 'heists', 'global'));
                     }
+                    refreshUI();
                 }
             };
         })();
@@ -785,8 +808,6 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
         el.nameSubmit.onclick = HeistLogic.handleNameSubmit;
-        
-        // Update loop for smooth points progression visualization
         setInterval(HeistLogic.tick, 1000);
         HeistLogic.start();
     </script>
