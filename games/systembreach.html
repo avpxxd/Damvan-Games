@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.9.0</title>
+    <title>System Breach | Terminal v3.9.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -154,7 +154,7 @@
         }
         body.extra-hard #nuke-flash { background: #ef4444; }
 
-        #identity-modal.hidden, #quota-modal.hidden { display: none; }
+        #identity-modal.hidden, #quota-modal.hidden, #easter-egg-modal.hidden { display: none; }
         .glitch-text { text-shadow: 1px 0 #ff0000, -1px 0 #0000ff; }
         
         .stat-box {
@@ -441,7 +441,7 @@
         };
 
         const ATTACKS = [
-            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.0 }, // Nerfed to 0 to stop macro farming
+            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.0 }, 
             { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 2.0 },
             { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 6.0 },
             { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 20.0 },
@@ -449,10 +449,16 @@
             { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 180.0 },
         ];
 
+        // Global Anti-Cheat Trigger
+        window.triggerAntiCheat = () => {
+            el.easterEggModal.classList.remove('hidden');
+            el.easterEggModal.classList.add('flex');
+        };
+
         const HeistLogic = (() => {
             let state = { user: null, profile: null, heist: null, quotaReached: false, leaderboard: [] };
             let lastLocalAction = 0; 
-            let lastLocalTickTime = 0; // Local rate limiter for point generation
+            let lastLocalTickTime = 0; 
             let isUpdatingRefill = false;
             let unsubs = [];
 
@@ -466,18 +472,9 @@
             };
 
             function handleQuotaError(e) {
-                // Anti-Cheat Easter Egg Trigger
-                if (e && e.code === 'permission-denied') {
-                    if (el.easterEggModal) {
-                        el.easterEggModal.classList.remove('hidden');
-                        el.easterEggModal.classList.add('flex');
-                        
-                        if (el.logs) {
-                            const t = new Date();
-                            el.logs.innerHTML += `<div class="log-entry font-black tracking-widest text-red-500 border-red-500 bg-red-500/10"><span class="opacity-30">[${t.toLocaleTimeString([], {hour12:false})}]</span> ERROR: PERMISSION DENIED - STOP EXPLOITING</div>`;
-                            el.logs.scrollTop = el.logs.scrollHeight;
-                        }
-                    }
+                // If it's a permission denied, it's an exploit attempt.
+                if (e && (e.code === 'permission-denied')) {
+                    window.triggerAntiCheat();
                     return;
                 }
 
@@ -590,7 +587,7 @@
                     if (atk.id === 'bomb' || atk.id === 'nuke') { el.body.classList.add('shake-screen'); setTimeout(() => el.body.classList.remove('shake-screen'), 500); }
                 } catch (e) { 
                     handleQuotaError(e);
-                    console.error("Interdicted", e);
+                    console.error("Interdicted");
                     refreshUI();
                 }
             }
@@ -699,9 +696,8 @@
             async function resetHeist(ref) {
                 if(state.quotaReached) return;
                 
-                // 15% chance for Extra Hard mode
                 const isExtraHard = Math.random() < 0.15;
-                const numLocks = isExtraHard ? Math.floor(Math.random() * 3) + 6 : 4; // 6 to 8 locks if hard, else 4
+                const numLocks = isExtraHard ? Math.floor(Math.random() * 3) + 6 : 4; 
 
                 const locks = Array.from({ length: numLocks }, () => {
                     const hp = Math.floor(Math.random() * 501) + 500;
@@ -830,7 +826,6 @@
                         }
                     });
                 },
-                
                 handleNameSubmit: async () => {
                     const val = el.nameInput.value.trim();
                     
@@ -875,7 +870,7 @@
                         const lastTickObj = state.profile.lastTick;
                         const last = (lastTickObj && lastTickObj.toMillis) ? lastTickObj.toMillis() : (lastTickObj || now);
                         
-                        // Enforce 10000ms delay locally
+                        // Strict 10-second tick (10,000ms)
                         const timeSinceServerTick = now - last;
                         const timeSinceLocalTick = now - lastLocalTickTime;
 
