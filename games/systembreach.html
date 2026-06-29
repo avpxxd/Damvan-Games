@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.8.5</title>
+    <title>System Breach | Terminal v3.9.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -285,6 +285,20 @@
         </div>
     </div>
 
+    <!-- Anti-Cheat Easter Egg Modal -->
+    <div id="easter-egg-modal" class="fixed inset-0 bg-red-950/95 z-[6000] hidden flex-col items-center justify-center p-6 text-center shadow-2xl">
+        <div class="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjQiPgo8cmVjdCB3aWR0aD0iNCIgaGVpZ2h0PSI0IiBmaWxsPSIjMDAwIiBmaWxsLW9wYWNpdHk9IjAuMSIvPgo8L3N2Zz4=')] opacity-50 pointer-events-none"></div>
+        <i data-lucide="shield-alert" class="text-red-500 w-20 h-20 md:w-24 md:h-24 mx-auto animate-pulse mb-6"></i>
+        <h2 class="text-4xl md:text-6xl font-black italic uppercase text-red-500 mb-2 glitch-text shake-screen">NICE TRY.</h2>
+        <p class="text-xs md:text-sm opacity-80 font-bold uppercase tracking-widest text-red-400 mt-4 max-w-md leading-relaxed">
+            UNAUTHORIZED DATABASE TAMPERING DETECTED.<br><br>
+            Your exploits have been blocked by the firewall. Stop trying to cheat, agent. We see you.
+        </p>
+        <button id="close-easter-egg" class="mt-8 bg-red-500/10 border border-red-500 text-red-500 font-black px-8 py-3 uppercase text-xs hover:bg-red-500 hover:text-black transition-all tracking-widest cursor-pointer z-10 relative">
+            I understand
+        </button>
+    </div>
+
     <!-- UI Header -->
     <header class="p-3 md:p-4 border-b terminal-border flex flex-col md:flex-row justify-between items-center gap-3 bg-zinc-950 shrink-0">
         <div class="flex items-center gap-3 w-full md:w-auto">
@@ -421,7 +435,9 @@
             leaderboard: document.getElementById('leaderboard-container'),
             quotaModal: document.getElementById('quota-modal'),
             saveProgressBtn: document.getElementById('save-progress-btn'),
-            saveProgressText: document.getElementById('save-progress-text')
+            saveProgressText: document.getElementById('save-progress-text'),
+            easterEggModal: document.getElementById('easter-egg-modal'),
+            closeEasterEgg: document.getElementById('close-easter-egg')
         };
 
         const ATTACKS = [
@@ -450,6 +466,21 @@
             };
 
             function handleQuotaError(e) {
+                // Anti-Cheat Easter Egg Trigger
+                if (e && e.code === 'permission-denied') {
+                    if (el.easterEggModal) {
+                        el.easterEggModal.classList.remove('hidden');
+                        el.easterEggModal.classList.add('flex');
+                        
+                        if (el.logs) {
+                            const t = new Date();
+                            el.logs.innerHTML += `<div class="log-entry font-black tracking-widest text-red-500 border-red-500 bg-red-500/10"><span class="opacity-30">[${t.toLocaleTimeString([], {hour12:false})}]</span> ERROR: PERMISSION DENIED - STOP EXPLOITING</div>`;
+                            el.logs.scrollTop = el.logs.scrollHeight;
+                        }
+                    }
+                    return;
+                }
+
                 if (e && (e.code === 'resource-exhausted' || e.code === 'quota-exceeded' || (e.message && e.message.includes('quota')))) {
                     if (!state.quotaReached) {
                         state.quotaReached = true;
@@ -559,7 +590,7 @@
                     if (atk.id === 'bomb' || atk.id === 'nuke') { el.body.classList.add('shake-screen'); setTimeout(() => el.body.classList.remove('shake-screen'), 500); }
                 } catch (e) { 
                     handleQuotaError(e);
-                    console.error("Interdicted");
+                    console.error("Interdicted", e);
                     refreshUI();
                 }
             }
@@ -696,6 +727,13 @@
                 start: async () => {
                     createActionButtons();
 
+                    if (el.closeEasterEgg) {
+                        el.closeEasterEgg.onclick = () => {
+                            el.easterEggModal.classList.add('hidden');
+                            el.easterEggModal.classList.remove('flex');
+                        };
+                    }
+
                     const googleBtn = document.getElementById('google-signin-btn');
                     if (googleBtn) {
                         googleBtn.onclick = async () => {
@@ -792,6 +830,7 @@
                         }
                     });
                 },
+                
                 handleNameSubmit: async () => {
                     const val = el.nameInput.value.trim();
                     
@@ -836,14 +875,13 @@
                         const lastTickObj = state.profile.lastTick;
                         const last = (lastTickObj && lastTickObj.toMillis) ? lastTickObj.toMillis() : (lastTickObj || now);
                         
-                        // Exploit Patch: Strictly enforce 60000ms delay locally and via server timestamp diff.
-                        // We removed POINT_TICK_MS to prevent users from reassigning it via DevTools.
+                        // Enforce 10000ms delay locally
                         const timeSinceServerTick = now - last;
                         const timeSinceLocalTick = now - lastLocalTickTime;
 
-                        if (timeSinceServerTick >= 60000 && timeSinceLocalTick >= 59000) {
+                        if (timeSinceServerTick >= 10000 && timeSinceLocalTick >= 9000) {
                             isUpdatingRefill = true;
-                            lastLocalTickTime = now; // Enforce local throttle
+                            lastLocalTickTime = now;
                             try { 
                                 await updateDoc(doc(db, 'artifacts', appId, 'users', state.user.uid, 'state', 'profile'), { 
                                     points: increment(1), 
@@ -855,8 +893,8 @@
                                 isUpdatingRefill = false; 
                             }
                         } else {
-                            const diff = Math.max(0, (last + 60000) - now);
-                            if (el.timer) el.timer.innerText = `${Math.floor(diff/60000)}:${Math.floor((diff%60000)/1000).toString().padStart(2, '0')}`;
+                            const diff = Math.max(0, (last + 10000) - now);
+                            if (el.timer) el.timer.innerText = `0:${Math.floor(diff/1000).toString().padStart(2, '0')}`;
                         }
                     }
                     if (state.heist?.isCracked && state.heist.breachTime > 0) {
