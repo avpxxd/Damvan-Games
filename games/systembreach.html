@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>System Breach | Terminal v3.9.1</title>
+    <title>System Breach | Terminal v3.F.U</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -27,7 +27,6 @@
             transition: all 0.5s ease-in-out;
         }
 
-        /* Extra Hard Theme Overrides */
         body.extra-hard {
             --term-green: #ef4444; /* red-500 */
             --glow: 0 0 15px rgba(239, 68, 68, 0.6);
@@ -441,12 +440,12 @@
         };
 
         const ATTACKS = [
-            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.0 }, 
-            { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 2.0 },
-            { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 6.0 },
-            { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 20.0 },
-            { id: 'bomb', name: 'Bomb', cost: 50, dmg: [100, 500], icon: 'bomb', data: 75.0 },
-            { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 180.0 },
+            { id: 'guess', name: 'Guess', cost: 0, dmg: [1, 5], icon: 'target', data: 0.1 }, 
+            { id: 'hit', name: 'Hit', cost: 2, dmg: [10, 20], icon: 'zap', data: 0.5 },
+            { id: 'drill', name: 'Drill', cost: 5, dmg: [20, 50], icon: 'cpu', data: 1.0 },
+            { id: 'hack', name: 'Hack', cost: 15, dmg: [50, 150], icon: 'terminal', data: 5.0 },
+            { id: 'bomb', name: 'Bomb', cost: 50, dmg: [100, 500], icon: 'bomb', data: 20.0 },
+            { id: 'nuke', name: 'Nuke', cost: 100, dmg: [1000, 1000], icon: 'radiation', data: 100.0 },
         ];
 
         // Global Anti-Cheat Trigger
