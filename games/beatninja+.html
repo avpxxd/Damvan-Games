@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
-    <title>BeatNinja: Custom Rhythm</title>
+    <title>BeatNinja+: Custom Rhythm</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800;900&display=swap" rel="stylesheet">
     <style>
@@ -77,7 +77,7 @@
                 <h1 class="text-6xl sm:text-8xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-600">BeatNinja</h1>
                 <p class="text-xl mb-8 text-gray-300 font-semibold tracking-wider">Custom Rhythm Edition</p>
                 
-                <p class="text-md sm:text-lg mb-6 text-gray-400">Slice the blocks in the correct direction matching the beat. Avoid bombs!</p>
+                <p class="text-md sm:text-lg mb-6 text-gray-400">Slice the blocks in the correct direction matching the beat. The closer to the middle, the better! Avoid bombs!</p>
                 
                 <div class="mb-8">
                     <h3 class="text-lg font-bold text-gray-300 mb-3 uppercase tracking-widest">Select Difficulty</h3>
@@ -261,7 +261,11 @@
         let bpm = 120;
         let audioLoaded = false;
         let songDuration = 0;
-        let startTimeOffset = 0;
+        
+        // Lead-In Audio Sync Engine
+        let gameStartContextTime = 0;
+        let audioStarted = false;
+        let currentVirtualTime = 0;
 
         // Game Engine Variables
         const canvas = document.getElementById('gameCanvas');
@@ -344,7 +348,7 @@
         function resizeCanvas() {
             canvas.width = window.innerWidth;
             canvas.height = window.innerHeight;
-            hitZoneY = canvas.height - 150;
+            hitZoneY = canvas.height / 2; // Hit line is now precisely in the middle of the screen
         }
         window.addEventListener('resize', resizeCanvas);
         resizeCanvas();
@@ -561,7 +565,7 @@
         }
 
         // ==========================================
-        // RHYTHM GAME LOGIC
+        // RHYTHM GAME LOGIC (VIRTUAL TIMING)
         // ==========================================
         let nextSpawnBeatTime = 0;
         
@@ -583,11 +587,13 @@
             if(audioContext.state === 'suspended') audioContext.resume();
             
             audioPlayer.currentTime = 0;
-            audioPlayer.play();
             
+            // Setup Lead-in Time (Give player time to see first blocks before music plays)
             travelTimeSeconds = 2.0 / diffConfig[difficulty].speedMultiplier;
-            startTimeOffset = audioContext.currentTime; 
-            nextSpawnBeatTime = startTimeOffset; 
+            gameStartContextTime = audioContext.currentTime; 
+            audioStarted = false;
+            currentVirtualTime = -travelTimeSeconds;
+            nextSpawnBeatTime = 0; // Track starts at 0
             
             lastFrameTime = performance.now();
             if(animationFrameId) cancelAnimationFrame(animationFrameId);
@@ -597,15 +603,12 @@
         function spawnBlockLogic() {
             if(currentState !== STATES.PLAYING) return;
             
-            const trackTime = audioPlayer.currentTime;
             const lookahead = travelTimeSeconds + 1.0; 
             const secondsPerBeat = 60.0 / bpm;
             const spawnInterval = secondsPerBeat * diffConfig[difficulty].spawnIntervalBeats;
 
-            const actualTrackTimeInContext = startTimeOffset + trackTime;
-
-            while (nextSpawnBeatTime < actualTrackTimeInContext + lookahead) {
-                if (nextSpawnBeatTime - startTimeOffset > songDuration - travelTimeSeconds) break;
+            while (nextSpawnBeatTime < currentVirtualTime + lookahead) {
+                if (nextSpawnBeatTime > songDuration) break; // Reached end of song
 
                 if (Math.random() > 0.2 || difficulty === 'hard') {
                     const rand = Math.random();
@@ -635,25 +638,23 @@
         }
 
         function updatePositions() {
-            const actualTrackTimeInContext = startTimeOffset + audioPlayer.currentTime;
-
             blocks.forEach(block => {
                 if(block.hit || block.missed) return;
 
-                const timeRemaining = block.targetTime - actualTrackTimeInContext;
+                const timeRemaining = block.targetTime - currentVirtualTime;
                 const startY = -block.size;
                 const distance = hitZoneY - startY;
                 const pixelsPerSecond = distance / travelTimeSeconds;
                 
                 block.y = hitZoneY - (timeRemaining * pixelsPerSecond);
 
-                if (timeRemaining < -0.2) { 
+                if (block.y > canvas.height + block.size) { 
                     block.missed = true;
                     if(block.type === 'note') registerMiss();
                 }
             });
 
-            blocks = blocks.filter(b => !b.hit && !b.missed && b.y < canvas.height + 100);
+            blocks = blocks.filter(b => !b.hit && !b.missed && b.y < canvas.height + 200);
             
             particles.forEach(p => {
                 p.x += p.vx; p.y += p.vy;
@@ -666,10 +667,16 @@
         function drawGame() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Hit Zone
+            // Draw Glowing Hit Line (Now dynamically placed in the exact center)
+            const gradLine = ctx.createLinearGradient(0, 0, canvas.width, 0);
+            gradLine.addColorStop(0, 'rgba(6, 182, 212, 0)');
+            gradLine.addColorStop(0.2, 'rgba(6, 182, 212, 0.5)');
+            gradLine.addColorStop(0.8, 'rgba(6, 182, 212, 0.5)');
+            gradLine.addColorStop(1, 'rgba(6, 182, 212, 0)');
+
             ctx.shadowBlur = 20;
             ctx.shadowColor = '#06b6d4';
-            ctx.strokeStyle = 'rgba(6, 182, 212, 0.5)';
+            ctx.strokeStyle = gradLine;
             ctx.lineWidth = 4;
             ctx.beginPath();
             ctx.moveTo(0, hitZoneY);
@@ -684,21 +691,20 @@
                 ctx.save();
                 ctx.translate(block.x, block.y);
                 
-                // Base square
                 if(block.type === 'note') {
-                    ctx.fillStyle = getDirectionColor(block.direction); // Solid Colors
-                    ctx.strokeStyle = '#ffffff'; // White outer rim
+                    ctx.fillStyle = getDirectionColor(block.direction);
+                    ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     ctx.shadowBlur = 15;
                     ctx.shadowColor = ctx.fillStyle;
                 } else if (block.type === 'bomb') {
-                    ctx.fillStyle = '#ef4444'; // Solid Red
+                    ctx.fillStyle = '#ef4444';
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     ctx.shadowBlur = 20;
                     ctx.shadowColor = '#ef4444';
                 } else if (block.type === 'life') {
-                    ctx.fillStyle = '#10b981'; // Solid Green
+                    ctx.fillStyle = '#10b981';
                     ctx.strokeStyle = '#ffffff';
                     ctx.lineWidth = 2;
                     ctx.shadowBlur = 15;
@@ -710,7 +716,6 @@
                 ctx.fill();
                 ctx.stroke();
 
-                // Inner graphic
                 ctx.shadowBlur = 0;
                 ctx.fillStyle = 'white';
                 if(block.type === 'note') {
@@ -790,16 +795,28 @@
         function gameLoop() {
             if(currentState !== STATES.PLAYING) return;
             
-            if(audioPlayer.ended || (songDuration > 0 && audioPlayer.currentTime >= songDuration - 0.5)) {
-                endGame(true);
-                return;
+            // Advance time
+            if (!audioStarted) {
+                // Game loop runs while we wait for blocks to fall into the play area
+                currentVirtualTime = (audioContext.currentTime - gameStartContextTime) - travelTimeSeconds;
+                if (currentVirtualTime >= 0) {
+                    audioPlayer.play();
+                    audioStarted = true;
+                    currentVirtualTime = audioPlayer.currentTime;
+                }
+            } else {
+                // Audio is now playing, sync perfectly to it
+                currentVirtualTime = audioPlayer.currentTime;
+                if(audioPlayer.ended || (songDuration > 0 && currentVirtualTime >= songDuration - 0.5)) {
+                    endGame(true);
+                    return;
+                }
             }
 
             spawnBlockLogic();
             updatePositions();
             checkSlices(); 
             
-            // Time-based trail expiration (120ms)
             const now = performance.now();
             sliceTrail = sliceTrail.filter(p => now - p.time < 120);
             
@@ -823,9 +840,8 @@
                 if(id === 'mouse') sliceTrail = path;
                 else touchPaths.set(id, path);
             }
-            // Tag each coordinate with a timestamp so it lives for exactly 120ms
             path.push({x, y, time: performance.now()});
-            if(path.length > 25) path.shift(); // Hard cap for memory safety
+            if(path.length > 25) path.shift();
         }
 
         function checkSlices() {
@@ -849,14 +865,9 @@
                 blocks.forEach(block => {
                     if (block.hit || block.missed) return;
 
-                    // Prevent accidentally slicing blocks that are too far up the screen
-                    if (block.y < hitZoneY - block.size * 3) return;
-
                     const half = block.size / 2;
                     let hit = false;
                     
-                    // Robust Line-to-Point distance check. 
-                    // This fully solves the "tunneling" issue where rapid swipes skip over the block between frames.
                     let l2 = dx * dx + dy * dy;
                     if (l2 > 0) {
                         let t = ((block.x - pStart.x) * dx + (block.y - pStart.y) * dy) / l2;
@@ -865,7 +876,7 @@
                         let projY = pStart.y + t * dy;
                         let distToLine = Math.hypot(block.x - projX, block.y - projY);
 
-                        if (distToLine < half * 1.5) { // 1.5x generous hitbox for mouse/touch
+                        if (distToLine < half * 1.5) { 
                             hit = true;
                         }
                     }
@@ -903,28 +914,32 @@
             while (angleDiff <= -Math.PI) angleDiff += Math.PI * 2;
             while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
 
-            // 60-degree tolerance (PI/3). Generous window for rapid physical swipes.
             if (Math.abs(angleDiff) <= Math.PI / 3) {
-                // Score based on visual distance to the hit line, incredibly intuitive for players
+                // ACCURACY BY DISTANCE: How close did they cut it to the perfect center line?
                 const distanceToHitZone = Math.abs(block.y - hitZoneY);
 
                 if (distanceToHitZone <= block.size) {
                     stats.perfect++; addScore(100); showComboText("Perfect!", '#3b82f6');
-                } else if (distanceToHitZone <= block.size * 2) {
+                } else if (distanceToHitZone <= block.size * 2.5) {
                     stats.good++; addScore(50); showComboText("Good", '#eab308');
                 } else {
-                    stats.good++; addScore(10); showComboText("Early", '#9ca3af');
+                    // They sliced it correctly, but off the target line
+                    stats.good++; addScore(10);
+                    showComboText(block.y < hitZoneY ? "Early" : "Late", '#9ca3af');
                 }
             } else {
                 // Sliced the wrong way
-                registerMiss();
+                registerMiss(false, false);
             }
         }
 
-        function registerMiss(isBomb = false) {
+        function registerMiss(isBomb = false, isTimingMiss = false) {
             stats.miss++; combo = 0; multiplier = 1; lives--;
             updateHUD();
-            showComboText(isBomb ? "BOOM!" : "Miss!", '#ef4444');
+            
+            if (isBomb) showComboText("BOOM!", '#ef4444');
+            else if (!isTimingMiss) showComboText("Miss!", '#ef4444');
+            // If it is a timing miss, the showComboText is handled by processHit
             
             canvas.style.transform = `translate(${Math.random()*10-5}px, ${Math.random()*10-5}px)`;
             setTimeout(() => canvas.style.transform = 'none', 100);
@@ -987,7 +1002,7 @@
         // ==========================================
         canvas.addEventListener('mousedown', (e) => { 
             isSlicing = true; 
-            sliceTrail = []; // Fresh trail for a new click
+            sliceTrail = []; 
             addSlicePoint('mouse', e.clientX, e.clientY); 
         });
         
@@ -999,8 +1014,6 @@
         
         canvas.addEventListener('mouseup', () => { 
             isSlicing = false; 
-            // We NO LONGER clear sliceTrail here! This allows rapid "flick" slices to be 
-            // properly caught by the game loop before the points naturally expire.
         });
         
         canvas.addEventListener('mouseleave', () => { 
@@ -1024,7 +1037,6 @@
         
         canvas.addEventListener('touchend', (e) => {
             e.preventDefault();
-            // Just like mouseup, we don't delete the path immediately so the final frame can process it.
         }, {passive: false});
 
         // ==========================================
@@ -1042,7 +1054,7 @@
         ui.resumeButton.addEventListener('click', () => {
             switchState(STATES.PLAYING);
             if(audioContext && audioContext.state === 'suspended') audioContext.resume();
-            audioPlayer.play();
+            if(audioStarted) audioPlayer.play();
             lastFrameTime = performance.now();
             gameLoop();
         });
