@@ -2,30 +2,52 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Subdomain Connection Test</title>
+    <title>Multiplayer Canvas Test</title>
+    <style>
+        body { text-align: center; background-color: #222; color: white; font-family: sans-serif; }
+        canvas { background-color: #333; border: 2px solid #fff; cursor: crosshair; }
+    </style>
 </head>
 <body>
-    <h1>games.damvan.ca</h1>
-    <button id="pingButton">Ping dos.damvan.ca</button>
-    <p id="responseBox" style="color: green; font-weight: bold;"></p>
+    <h1>Air Hockey: Arena Test</h1>
+    <canvas id="gameCanvas" width="800" height="600"></canvas>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script>
-        // Point directly to your backend subdomain
-        const SERVER_URL = 'https://dos.damvan.ca';
+        const socket = io('https://dos.damvan.ca');
         
-        const socket = io(SERVER_URL);
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
 
-        const button = document.getElementById('pingButton');
-        const responseBox = document.getElementById('responseBox');
+        // 1. Send our mouse position to the server whenever it moves over the canvas
+        canvas.addEventListener('mousemove', (event) => {
+            // Get the exact mouse coordinates relative to the canvas
+            const rect = canvas.getBoundingClientRect();
+            const x = event.clientX - rect.left;
+            const y = event.clientY - rect.top;
 
-        button.addEventListener('click', () => {
-            responseBox.innerText = "Sending to backend...";
-            socket.emit('buttonPressed');
+            socket.emit('playerMove', { x: x, y: y });
         });
 
-        socket.on('serverResponse', (data) => {
-            responseBox.innerText = data.message;
+        // 2. Listen for the 60fps 'gameState' broadcast from the server
+        socket.on('gameState', (players) => {
+            // Clear the canvas from the last frame
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw every player currently connected
+            for (let id in players) {
+                const player = players[id];
+                
+                ctx.beginPath();
+                ctx.arc(player.x, player.y, 30, 0, Math.PI * 2); // Draw a circle (radius 30)
+                ctx.fillStyle = player.color;
+                ctx.fill();
+                
+                // Outline our own circle in white, others in black
+                ctx.strokeStyle = (id === socket.id) ? 'white' : 'black';
+                ctx.lineWidth = 4;
+                ctx.stroke();
+            }
         });
     </script>
 </body>
