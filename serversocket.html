@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Subdomain Connection Test</title>
+</head>
+<body>
+    <h1>games.damvan.ca</h1>
+    <button id="pingButton">Ping dos.damvan.ca</button>
+    <p id="responseBox" style="color: green; font-weight: bold;"></p>
+
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Point directly to your backend subdomain
+        const SERVER_URL = 'https://dos.damvan.ca';
+        
+        const socket = io(SERVER_URL);
+
+        const button = document.getElementById('pingButton');
+        const responseBox = document.getElementById('responseBox');
+
+        button.addEventListener('click', () => {
+            responseBox.innerText = "Sending to backend...";
+            socket.emit('buttonPressed');
+        });
+
+        socket.on('serverResponse', (data) => {
+            responseBox.innerText = data.message;
+        });
+    </script>
+</body>
+</html>
