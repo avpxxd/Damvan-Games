@@ -6,10 +6,13 @@
     <style>
         body { text-align: center; background-color: #222; color: white; font-family: sans-serif; }
         canvas { background-color: #333; border: 2px solid #fff; cursor: crosshair; }
+        #status { font-weight: bold; padding: 10px; margin-bottom: 10px; }
     </style>
 </head>
 <body>
     <h1>Air Hockey: Arena Test</h1>
+    <div id="status" style="color: yellow;">Connecting to server...</div>
+    
     <canvas id="gameCanvas" width="800" height="600"></canvas>
 
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
@@ -18,32 +21,42 @@
         
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        const statusDiv = document.getElementById('status');
 
-        // 1. Send our mouse position to the server whenever it moves over the canvas
+        // Connection monitoring
+        socket.on('connect', () => {
+            statusDiv.innerText = "Connected to backend successfully!";
+            statusDiv.style.color = "lightgreen";
+        });
+
+        socket.on('connect_error', (error) => {
+            statusDiv.innerText = `Connection Error: ${error.message}`;
+            statusDiv.style.color = "red";
+        });
+
+        socket.on('disconnect', (reason) => {
+            statusDiv.innerText = `Disconnected: ${reason}`;
+            statusDiv.style.color = "orange";
+        });
+
         canvas.addEventListener('mousemove', (event) => {
-            // Get the exact mouse coordinates relative to the canvas
             const rect = canvas.getBoundingClientRect();
             const x = event.clientX - rect.left;
             const y = event.clientY - rect.top;
-
             socket.emit('playerMove', { x: x, y: y });
         });
 
-        // 2. Listen for the 60fps 'gameState' broadcast from the server
         socket.on('gameState', (players) => {
-            // Clear the canvas from the last frame
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Draw every player currently connected
             for (let id in players) {
                 const player = players[id];
                 
                 ctx.beginPath();
-                ctx.arc(player.x, player.y, 30, 0, Math.PI * 2); // Draw a circle (radius 30)
+                ctx.arc(player.x, player.y, 30, 0, Math.PI * 2);
                 ctx.fillStyle = player.color;
                 ctx.fill();
                 
-                // Outline our own circle in white, others in black
                 ctx.strokeStyle = (id === socket.id) ? 'white' : 'black';
                 ctx.lineWidth = 4;
                 ctx.stroke();
