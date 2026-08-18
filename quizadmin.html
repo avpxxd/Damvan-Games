@@ -247,9 +247,30 @@
             </div>
 
             <!-- Questions List -->
-            <div id="questionsContainer" class="flex-grow overflow-y-auto space-y-3 max-h-[650px] pr-1">
+            <div id="questionsContainer" class="flex-grow overflow-y-auto space-y-3 max-h-[480px] pr-1">
                 <div class="p-8 text-center text-slate-400 font-mono text-sm">
                     Connecting and loading questions from Firestore...
+                </div>
+            </div>
+        </section>
+
+        <!-- FULL WIDTH BOTTOM SECTION: PLAYER MODERATION & LEADERBOARD -->
+        <section class="lg:col-span-12 glass-panel p-6 rounded-3xl space-y-4 mt-2">
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-3">
+                <div>
+                    <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
+                        <span>👥</span> Active Players & Leaderboard Moderation
+                    </h2>
+                    <p class="text-xs text-slate-400">Deleting a player here or in Firebase Console immediately kicks them back to the join screen in real time</p>
+                </div>
+                <span id="playerCountBadge" class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-purple-900/60 text-purple-300 border border-purple-600/40">
+                    0 Players
+                </span>
+            </div>
+
+            <div id="playersContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto pr-1">
+                <div class="col-span-full p-6 text-center text-slate-400 font-mono text-sm">
+                    Loading players from Firestore...
                 </div>
             </div>
         </section>
@@ -282,6 +303,7 @@
                 this.db = null;
                 this.auth = null;
                 this.questions = [];
+                this.players = [];
                 this.init();
             }
 
@@ -295,6 +317,7 @@
 
                     this.updateConnStatus(true, `Connected to ${DEFAULT_FIREBASE_CONFIG.projectId}`);
                     this.subscribeToQuestions();
+                    this.subscribeToPlayers();
                 } catch (err) {
                     console.error("Firebase init failed:", err);
                     this.updateConnStatus(false, "Connection Failed: " + err.message);
@@ -535,6 +558,84 @@
                         </div>
                     `;
                 }).join('');
+            }
+
+            subscribeToPlayers() {
+                if (!this.db) return;
+                const leaderboardCol = collection(this.db, 'artifacts', APP_ID, 'public', 'data', 'global_leaderboard');
+
+                onSnapshot(leaderboardCol, (snapshot) => {
+                    const loaded = [];
+                    snapshot.forEach(docSnap => {
+                        loaded.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+                    loaded.sort((a, b) => (b.score || 0) - (a.score || 0));
+                    this.players = loaded;
+                    this.renderPlayers();
+                }, (error) => {
+                    console.error("Players listener error:", error);
+                });
+            }
+
+            renderPlayers() {
+                const container = document.getElementById('playersContainer');
+                const badge = document.getElementById('playerCountBadge');
+                if (badge) badge.innerText = `${this.players.length} Player${this.players.length === 1 ? '' : 's'}`;
+
+                if (!container) return;
+
+                if (this.players.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full p-6 text-center text-slate-400 font-sans text-xs">
+                            No registered players in Firebase right now.
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = this.players.map((p, idx) => {
+                    const nick = p.nickname || 'Unknown Player';
+                    const avatar = p.avatar || '🤡';
+                    const score = p.score || 0;
+                    const rank = idx + 1;
+
+                    return `
+                        <div class="p-3 rounded-xl bg-slate-900/70 border border-slate-700/60 flex items-center justify-between gap-2 hover:border-slate-600 transition">
+                            <div class="flex items-center gap-2.5 min-w-0">
+                                <span class="text-xl flex-shrink-0">${avatar}</span>
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="text-xs font-bold text-slate-100 font-sans truncate">${nick}</span>
+                                        <span class="text-[10px] font-mono text-amber-300 font-bold flex-shrink-0">★${score}</span>
+                                    </div>
+                                    <span class="text-[10px] font-mono text-slate-400 block truncate" title="${p.id}">ID: ${p.id.slice(0, 10)}...</span>
+                                </div>
+                            </div>
+                            <button onclick="adminApp.deletePlayer('${p.id}', '${nick.replace(/'/g, "\\'")}')" title="Boot Player (Kicks back to join screen)" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-xs font-bold transition flex-shrink-0">
+                                🗑️ Kick
+                            </button>
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            async deletePlayer(userId, nickname) {
+                if (!confirm(`Are you sure you want to kick/delete player "${nickname}"?\n\nThis will immediately boot them back to the join screen in real time.`)) {
+                    return;
+                }
+
+                try {
+                    const lbRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'global_leaderboard', userId);
+                    const opRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'online_players', userId);
+
+                    await deleteDoc(lbRef);
+                    await deleteDoc(opRef).catch(() => {});
+
+                    this.showToast(`Booted player "${nickname}" successfully!`, "info");
+                } catch (err) {
+                    console.error("Delete player error:", err);
+                    this.showToast("Failed to delete player: " + err.message, "error");
+                }
             }
 
             showToast(msg, type = 'info') {
