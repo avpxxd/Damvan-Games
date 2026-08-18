@@ -100,7 +100,7 @@
                     </svg>
                 </div>
 
-                <!-- Error X (Hidden by default, shown after 7 seconds) -->
+                <!-- Error X (Hidden by default, shown after 25 seconds) -->
                 <div id="errorXContainer" class="hidden flex-col items-center justify-center">
                     <div class="w-12 h-12 md:w-16 md:h-16 rounded-full bg-red-500/20 border-2 border-red-500 flex items-center justify-center text-red-500 shadow-[0_0_20px_rgba(239,68,68,0.5)]">
                         <svg class="w-8 h-8 md:w-10 md:h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2.5">
@@ -245,9 +245,9 @@
             laptopContainer.className = 'p-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-cyan-400 transition-all duration-300';
             serverContainer.className = 'p-4 rounded-2xl bg-slate-800/80 border border-slate-700 text-slate-200 transition-all duration-300';
 
-            // Set 7-second timeout for error state
+            // Set 25-second timeout for error state
             clearTimeout(timeoutId);
-            timeoutId = setTimeout(triggerError, 7000);
+            timeoutId = setTimeout(triggerError, 25000);
         }
 
         function triggerError() {
@@ -308,7 +308,14 @@
         function initAudio() {
             audioToggleBtn.addEventListener('click', toggleAudio);
 
-            // Play automatically on first user click anywhere if browser blocked initial autoplay
+            // Play audio automatically on load
+            bgAudio.play().then(() => {
+                updateAudioUI(true);
+            }).catch(err => {
+                console.log("Autoplay blocked by browser policy, waiting for user interaction:", err);
+            });
+
+            // Fallback: play on first user interaction if blocked by browser policy
             const enableAudioOnInteraction = () => {
                 if (bgAudio.paused) {
                     bgAudio.play().then(() => {
@@ -318,6 +325,7 @@
             };
 
             window.addEventListener('click', enableAudioOnInteraction, { once: true });
+            window.addEventListener('keydown', enableAudioOnInteraction, { once: true });
         }
     </script>
 </body>
