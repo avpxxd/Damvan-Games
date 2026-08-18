@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JGFGJGQ &bull; Question Manager Portal</title>
+
+    <!-- Google Fonts: Plus Jakarta Sans & Space Grotesk -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        display: ['"Space Grotesk"', '"Plus Jakarta Sans"', 'sans-serif'],
+                        sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'],
+                        mono: ['Consolas', 'Monaco', 'Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            background-color: #060913;
+            font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #f8fafc;
+            transition: all 0.2s ease;
+        }
+
+        .glass-input:focus {
+            outline: none;
+            border-color: #38bdf8;
+            background: rgba(30, 41, 59, 0.8);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.2);
+        }
+
+        .option-choice-row:hover {
+            background: rgba(30, 41, 59, 0.4);
+        }
+    </style>
+</head>
+
+<body class="min-h-full flex flex-col p-4 sm:p-6 md:p-8">
+
+    <!-- TOP HEADER -->
+    <header class="w-full max-w-7xl mx-auto mb-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 glass-panel p-4 sm:p-6 rounded-2xl">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 rounded-xl bg-sky-500/10 border border-sky-500/30 flex items-center justify-center text-2xl shadow-inner">
+                📝
+            </div>
+            <div>
+                <h1 class="font-display text-xl sm:text-2xl font-bold text-white tracking-tight flex items-center gap-2">
+                    Jackbox Quiz Question Manager
+                </h1>
+                <p class="text-xs text-slate-400 font-mono mt-0.5">
+                    Live Firestore Collection: <span class="text-sky-300">artifacts/jgfgjq-arena/public/data/trivia_questions</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <!-- Connection Status Badge -->
+            <div id="connStatus" class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/80 border border-slate-700 text-xs font-mono text-slate-300">
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" id="connDot"></span>
+                <span id="connLabel">Connecting to Firebase...</span>
+            </div>
+
+            <!-- Back to Game Link -->
+            <a href="JGFGJGQ.html" class="px-4 py-2 rounded-xl text-xs font-bold font-sans bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 transition flex items-center gap-1.5">
+                <span>🎮</span>
+                <span>Open Game</span>
+            </a>
+        </div>
+    </header>
+
+    <!-- MAIN GRID CONTAINER -->
+    <main class="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 flex-grow">
+
+        <!-- LEFT COLUMN: ADD QUESTION FORM (5 COLS) -->
+        <section class="lg:col-span-5 glass-panel p-6 rounded-3xl space-y-5 h-fit">
+            <div class="flex items-center justify-between border-b border-slate-700/60 pb-3">
+                <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
+                    <span>➕</span> Add New Trivia Question
+                </h2>
+                <span id="nextIdPreview" class="text-xs font-mono px-2.5 py-1 rounded-md bg-sky-950/80 text-sky-300 border border-sky-600/40">
+                    ID: Auto (q_...)
+                </span>
+            </div>
+
+            <form id="addQuestionForm" onsubmit="adminApp.handleSubmit(event)" class="space-y-4">
+
+                <!-- Question Text -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Question Prompt <span class="text-rose-400">*</span>
+                    </label>
+                    <textarea id="inpQuestion" rows="3" required placeholder="e.g. Which Jackbox game features a host named Cookie Masterson?"
+                        class="w-full px-3.5 py-2.5 rounded-xl glass-input text-sm resize-none"></textarea>
+                </div>
+
+                <!-- Category & Author (Row) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Category <span class="text-rose-400">*</span>
+                        </label>
+                        <input list="categorySuggestions" id="inpCategory" required placeholder="e.g. Party Pack 5"
+                            class="w-full px-3 py-2 rounded-xl glass-input text-sm">
+                        <datalist id="categorySuggestions">
+                            <option value="Party Pack 1">
+                            <option value="Party Pack 2">
+                            <option value="Party Pack 3">
+                            <option value="Party Pack 4">
+                            <option value="Party Pack 5">
+                            <option value="Party Pack 6">
+                            <option value="Party Pack 7">
+                            <option value="Party Pack 8">
+                            <option value="Party Pack 9">
+                            <option value="Party Pack 10">
+                            <option value="Trivia Murder Party">
+                            <option value="Fibbage Lore">
+                            <option value="Quiplash">
+                            <option value="Drawful">
+                            <option value="Jackbox Trivia Vault">
+                        </datalist>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                            Author
+                        </label>
+                        <input type="text" id="inpAuthor" value="Admin" placeholder="e.g. Admin"
+                            class="w-full px-3 py-2 rounded-xl glass-input text-sm">
+                    </div>
+                </div>
+
+                <!-- 4 Options with Radio Selector for Correct Answer -->
+                <div class="space-y-2.5 pt-1">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-slate-300">
+                            4 Choices & Correct Answer <span class="text-rose-400">*</span>
+                        </label>
+                        <span class="text-[11px] text-slate-400 font-mono">Select radio for correct</span>
+                    </div>
+
+                    <!-- Option 0 (A) -->
+                    <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-700/60 option-choice-row transition">
+                        <input type="radio" name="correctChoiceRadio" value="0" checked id="radio0" class="w-4 h-4 text-emerald-500 accent-emerald-500 cursor-pointer">
+                        <span class="w-7 h-7 rounded-lg bg-sky-500/20 text-sky-300 font-display text-xs font-bold flex items-center justify-center flex-shrink-0">A</span>
+                        <input type="text" id="inpOption0" required placeholder="Option A text..." class="flex-grow px-3 py-1.5 rounded-lg glass-input text-sm">
+                    </div>
+
+                    <!-- Option 1 (B) -->
+                    <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-700/60 option-choice-row transition">
+                        <input type="radio" name="correctChoiceRadio" value="1" id="radio1" class="w-4 h-4 text-emerald-500 accent-emerald-500 cursor-pointer">
+                        <span class="w-7 h-7 rounded-lg bg-indigo-500/20 text-indigo-300 font-display text-xs font-bold flex items-center justify-center flex-shrink-0">B</span>
+                        <input type="text" id="inpOption1" required placeholder="Option B text..." class="flex-grow px-3 py-1.5 rounded-lg glass-input text-sm">
+                    </div>
+
+                    <!-- Option 2 (C) -->
+                    <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-700/60 option-choice-row transition">
+                        <input type="radio" name="correctChoiceRadio" value="2" id="radio2" class="w-4 h-4 text-emerald-500 accent-emerald-500 cursor-pointer">
+                        <span class="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 font-display text-xs font-bold flex items-center justify-center flex-shrink-0">C</span>
+                        <input type="text" id="inpOption2" required placeholder="Option C text..." class="flex-grow px-3 py-1.5 rounded-lg glass-input text-sm">
+                    </div>
+
+                    <!-- Option 3 (D) -->
+                    <div class="flex items-center gap-2 p-2 rounded-xl border border-slate-700/60 option-choice-row transition">
+                        <input type="radio" name="correctChoiceRadio" value="3" id="radio3" class="w-4 h-4 text-emerald-500 accent-emerald-500 cursor-pointer">
+                        <span class="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 font-display text-xs font-bold flex items-center justify-center flex-shrink-0">D</span>
+                        <input type="text" id="inpOption3" required placeholder="Option D text..." class="flex-grow px-3 py-1.5 rounded-lg glass-input text-sm">
+                    </div>
+                </div>
+
+                <!-- Explanation -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-1.5">
+                        Answer Explanation / Fun Fact
+                    </label>
+                    <input type="text" id="inpExplanation" placeholder="e.g. Cookie Masterson is the iconic, fast-talking host of You Don't Know Jack."
+                        class="w-full px-3 py-2 rounded-xl glass-input text-sm">
+                </div>
+
+                <!-- Custom Document ID & Order (Optional override) -->
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                    <div>
+                        <label class="block text-[11px] font-mono text-slate-400 mb-1">Doc ID (Optional)</label>
+                        <input type="text" id="inpDocId" placeholder="Auto (e.g. q_012)" class="w-full px-3 py-1.5 rounded-lg glass-input text-xs font-mono">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-mono text-slate-400 mb-1">Order # (Optional)</label>
+                        <input type="number" id="inpOrder" placeholder="Auto (12)" class="w-full px-3 py-1.5 rounded-lg glass-input text-xs font-mono">
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" id="btnSubmit"
+                    class="w-full py-3.5 rounded-xl font-display text-base font-bold bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 text-white shadow-lg shadow-sky-500/25 transition active:scale-[0.99] flex items-center justify-center gap-2">
+                    <span>💾</span> Save Question to Firebase
+                </button>
+            </form>
+        </section>
+
+        <!-- RIGHT COLUMN: LIVE QUESTION BANK BROWSER (7 COLS) -->
+        <section class="lg:col-span-7 glass-panel p-6 rounded-3xl flex flex-col space-y-4">
+            
+            <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-slate-700/60 pb-4">
+                <div>
+                    <h2 class="font-display text-lg font-bold text-white flex items-center gap-2">
+                        <span>📚</span> Firestore Question Vault
+                    </h2>
+                    <p class="text-xs text-slate-400">Real-time synchronized with active trivia game</p>
+                </div>
+
+                <div class="flex items-center gap-2">
+                    <span id="questionCountBadge" class="px-3 py-1 rounded-full text-xs font-bold font-mono bg-sky-900/60 text-sky-300 border border-sky-600/40">
+                        0 Questions
+                    </span>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div>
+                <input type="text" id="filterInput" oninput="adminApp.renderQuestions()" placeholder="🔍 Filter questions by text, category, or ID..."
+                    class="w-full px-3.5 py-2 rounded-xl glass-input text-sm">
+            </div>
+
+            <!-- Questions List -->
+            <div id="questionsContainer" class="flex-grow overflow-y-auto space-y-3 max-h-[650px] pr-1">
+                <div class="p-8 text-center text-slate-400 font-mono text-sm">
+                    Connecting and loading questions from Firestore...
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- TOAST STACK -->
+    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <!-- FIREBASE SDK IMPORT (v10.8.0) -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        const DEFAULT_FIREBASE_CONFIG = {
+            apiKey: "AIzaSyC4SB1XWI0zej6170BO4QuR2IAH17DQVFQ",
+            authDomain: "jackbox-games-fan-game-jgq.firebaseapp.com",
+            projectId: "jackbox-games-fan-game-jgq",
+            storageBucket: "jackbox-games-fan-game-jgq.firebasestorage.app",
+            messagingSenderId: "32559811950",
+            appId: "1:32559811950:web:f5d08497aaefe23a83457f",
+            measurementId: "G-JZYH13JFF6"
+        };
+
+        const APP_ID = 'jgfgjq-arena';
+
+        class QuestionManagerApp {
+            constructor() {
+                this.db = null;
+                this.auth = null;
+                this.questions = [];
+                this.init();
+            }
+
+            async init() {
+                try {
+                    const fbApp = initializeApp(DEFAULT_FIREBASE_CONFIG);
+                    this.auth = getAuth(fbApp);
+                    this.db = getFirestore(fbApp);
+
+                    await signInAnonymously(this.auth);
+
+                    this.updateConnStatus(true, `Connected to ${DEFAULT_FIREBASE_CONFIG.projectId}`);
+                    this.subscribeToQuestions();
+                } catch (err) {
+                    console.error("Firebase init failed:", err);
+                    this.updateConnStatus(false, "Connection Failed: " + err.message);
+                    this.showToast("Failed to connect to Firebase", "error");
+                }
+            }
+
+            updateConnStatus(isConnected, message) {
+                const dot = document.getElementById('connDot');
+                const label = document.getElementById('connLabel');
+                if (isConnected) {
+                    dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]";
+                    label.textContent = message || "Connected";
+                    label.className = "text-emerald-300 font-mono";
+                } else {
+                    dot.className = "w-2.5 h-2.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]";
+                    label.textContent = message || "Disconnected";
+                    label.className = "text-rose-300 font-mono";
+                }
+            }
+
+            subscribeToQuestions() {
+                if (!this.db) return;
+                const qCol = collection(this.db, 'artifacts', APP_ID, 'public', 'data', 'trivia_questions');
+
+                onSnapshot(qCol, (snapshot) => {
+                    const loaded = [];
+                    snapshot.forEach(docSnap => {
+                        loaded.push({ id: docSnap.id, ...docSnap.data() });
+                    });
+
+                    // Sort by order or ID
+                    loaded.sort((a, b) => (a.order || 0) - (b.order || 0));
+                    this.questions = loaded;
+                    this.renderQuestions();
+                    this.updateNextIdPreview();
+                }, (error) => {
+                    console.error("Questions listener error:", error);
+                    this.showToast("Firestore Read Error: " + error.message, "error");
+                });
+            }
+
+            updateNextIdPreview() {
+                const nextNum = this.questions.length + 1;
+                const padStr = String(nextNum).padStart(3, '0');
+                const previewEl = document.getElementById('nextIdPreview');
+                if (previewEl) {
+                    previewEl.innerText = `Next Auto ID: q_${padStr}`;
+                }
+                const inpOrder = document.getElementById('inpOrder');
+                if (inpOrder && !inpOrder.value) {
+                    inpOrder.placeholder = `Auto (${nextNum})`;
+                }
+                const inpDocId = document.getElementById('inpDocId');
+                if (inpDocId && !inpDocId.value) {
+                    inpDocId.placeholder = `Auto (q_${padStr})`;
+                }
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                if (!this.db) {
+                    this.showToast("Firebase is not connected yet.", "error");
+                    return;
+                }
+
+                const btn = document.getElementById('btnSubmit');
+                btn.disabled = true;
+                btn.innerText = "⏳ Saving to Firestore...";
+
+                try {
+                    const questionText = document.getElementById('inpQuestion').value.trim();
+                    const category = document.getElementById('inpCategory').value.trim() || 'General';
+                    const author = document.getElementById('inpAuthor').value.trim() || 'Admin';
+                    const explanation = document.getElementById('inpExplanation').value.trim() || '';
+
+                    const opt0 = document.getElementById('inpOption0').value.trim();
+                    const opt1 = document.getElementById('inpOption1').value.trim();
+                    const opt2 = document.getElementById('inpOption2').value.trim();
+                    const opt3 = document.getElementById('inpOption3').value.trim();
+
+                    const correctRadio = document.querySelector('input[name="correctChoiceRadio"]:checked');
+                    const correctIndex = correctRadio ? parseInt(correctRadio.value, 10) : 0;
+
+                    const nextNum = this.questions.length + 1;
+                    const autoDocId = `q_${String(nextNum).padStart(3, '0')}`;
+                    const customDocId = document.getElementById('inpDocId').value.trim();
+                    const finalDocId = customDocId || autoDocId;
+
+                    const customOrder = document.getElementById('inpOrder').value;
+                    const finalOrder = customOrder ? parseInt(customOrder, 10) : nextNum;
+
+                    const questionDoc = {
+                        question: questionText,
+                        category: category,
+                        author: author,
+                        options: [opt0, opt1, opt2, opt3],
+                        correctIndex: correctIndex,
+                        explanation: explanation,
+                        order: finalOrder,
+                        createdAt: Date.now()
+                    };
+
+                    const docRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'trivia_questions', finalDocId);
+                    await setDoc(docRef, questionDoc);
+
+                    this.showToast(`Saved question "${finalDocId}" successfully!`, "success");
+
+                    // Clear form
+                    document.getElementById('inpQuestion').value = '';
+                    document.getElementById('inpOption0').value = '';
+                    document.getElementById('inpOption1').value = '';
+                    document.getElementById('inpOption2').value = '';
+                    document.getElementById('inpOption3').value = '';
+                    document.getElementById('inpExplanation').value = '';
+                    document.getElementById('inpDocId').value = '';
+                    document.getElementById('inpOrder').value = '';
+                    document.getElementById('radio0').checked = true;
+
+                    document.getElementById('inpQuestion').focus();
+                } catch (err) {
+                    console.error("Save question error:", err);
+                    this.showToast("Failed to save: " + err.message, "error");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = "<span>💾</span> Save Question to Firebase";
+                }
+            }
+
+            async deleteQuestion(docId, questionTitle) {
+                if (!confirm(`Are you sure you want to delete question "${docId}"?\n\n"${questionTitle}"`)) {
+                    return;
+                }
+
+                try {
+                    const docRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'trivia_questions', docId);
+                    await deleteDoc(docRef);
+                    this.showToast(`Deleted ${docId}`, "info");
+                } catch (err) {
+                    console.error("Delete error:", err);
+                    this.showToast("Failed to delete: " + err.message, "error");
+                }
+            }
+
+            prefillForm(q) {
+                document.getElementById('inpQuestion').value = q.question || '';
+                document.getElementById('inpCategory').value = q.category || '';
+                document.getElementById('inpAuthor').value = q.author || 'Admin';
+                document.getElementById('inpExplanation').value = q.explanation || '';
+
+                if (q.options && q.options.length >= 4) {
+                    document.getElementById('inpOption0').value = q.options[0] || '';
+                    document.getElementById('inpOption1').value = q.options[1] || '';
+                    document.getElementById('inpOption2').value = q.options[2] || '';
+                    document.getElementById('inpOption3').value = q.options[3] || '';
+                }
+
+                const radio = document.getElementById(`radio${q.correctIndex}`);
+                if (radio) radio.checked = true;
+
+                document.getElementById('inpDocId').value = q.id || '';
+                document.getElementById('inpOrder').value = q.order || '';
+
+                this.showToast(`Loaded "${q.id}" into form for editing/cloning`, "info");
+                document.getElementById('inpQuestion').focus();
+            }
+
+            renderQuestions() {
+                const container = document.getElementById('questionsContainer');
+                const badge = document.getElementById('questionCountBadge');
+                const filter = (document.getElementById('filterInput').value || '').toLowerCase().trim();
+
+                badge.innerText = `${this.questions.length} Question${this.questions.length === 1 ? '' : 's'}`;
+
+                const filtered = this.questions.filter(q => {
+                    if (!filter) return true;
+                    return (q.id && q.id.toLowerCase().includes(filter)) ||
+                           (q.question && q.question.toLowerCase().includes(filter)) ||
+                           (q.category && q.category.toLowerCase().includes(filter));
+                });
+
+                if (filtered.length === 0) {
+                    container.innerHTML = `
+                        <div class="p-8 text-center text-slate-400 font-sans text-sm">
+                            ${this.questions.length === 0 ? 'No questions in Firebase yet. Add your first question on the left!' : 'No questions match your filter.'}
+                        </div>
+                    `;
+                    return;
+                }
+
+                const letters = ['A', 'B', 'C', 'D'];
+
+                container.innerHTML = filtered.map((q, idx) => {
+                    const correctIdx = q.correctIndex !== undefined ? q.correctIndex : 0;
+                    const optionsHtml = (q.options || []).map((opt, oIdx) => {
+                        const isCorrect = oIdx === correctIdx;
+                        return `
+                            <div class="text-xs px-2.5 py-1 rounded-md flex items-center gap-1.5 ${isCorrect ? 'bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 font-bold' : 'bg-slate-800/60 border border-slate-700/50 text-slate-300'}">
+                                <span class="font-mono text-[10px] opacity-75">${letters[oIdx]}:</span>
+                                <span>${opt}</span>
+                                ${isCorrect ? '<span>✓</span>' : ''}
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="p-4 rounded-2xl bg-slate-900/60 border border-slate-700/60 space-y-2.5 transition hover:border-slate-600 backdrop-blur-sm">
+                            <div class="flex items-start justify-between gap-2">
+                                <div class="flex items-center gap-2">
+                                    <span class="font-mono text-xs px-2 py-0.5 rounded bg-sky-950/80 text-sky-300 border border-sky-800/60 font-bold">${q.id}</span>
+                                    <span class="text-xs font-bold uppercase tracking-wider px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">${q.category || 'General'}</span>
+                                    ${q.author ? `<span class="text-[11px] font-mono text-slate-400">by ${q.author}</span>` : ''}
+                                </div>
+
+                                <div class="flex items-center gap-1.5">
+                                    <button onclick="adminApp.prefillForm(${JSON.stringify(q).replace(/"/g, '&quot;')})" title="Edit / Clone" class="p-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs transition">
+                                        ✏️ Edit
+                                    </button>
+                                    <button onclick="adminApp.deleteQuestion('${q.id}', '${(q.question || '').replace(/'/g, "\\'")}')" title="Delete Question" class="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-xs transition">
+                                        🗑️
+                                    </button>
+                                </div>
+                            </div>
+
+                            <p class="font-sans font-semibold text-sm text-slate-100 leading-snug">
+                                ${q.question || 'No question text'}
+                            </p>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                ${optionsHtml}
+                            </div>
+
+                            ${q.explanation ? `
+                                <p class="text-xs font-mono text-slate-400 bg-slate-950/40 p-2 rounded-lg border border-slate-800/80">
+                                    💡 <strong>Explanation:</strong> ${q.explanation}
+                                </p>
+                            ` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            showToast(msg, type = 'info') {
+                const container = document.getElementById('toastContainer');
+                const toast = document.createElement('div');
+                toast.className = `px-4 py-3 rounded-xl shadow-2xl transition-all duration-300 transform translate-y-2 opacity-0 flex items-center gap-2 border pointer-events-auto backdrop-blur-md text-xs font-sans font-bold ${
+                    type === 'error' ? 'bg-[#450a0a] text-red-200 border-red-800' :
+                    type === 'success' ? 'bg-[#064e3b] text-emerald-200 border-emerald-800' :
+                    'bg-[#1e1b4b] text-purple-200 border-purple-800'
+                }`;
+                toast.innerHTML = `<span>${type === 'error' ? '✖' : type === 'success' ? '✔' : 'ℹ'}</span><span>${msg}</span>`;
+                container.appendChild(toast);
+                setTimeout(() => toast.classList.remove('translate-y-2', 'opacity-0'), 10);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 3500);
+            }
+        }
+
+        window.adminApp = new QuestionManagerApp();
+    </script>
+</body>
+
+</html>
