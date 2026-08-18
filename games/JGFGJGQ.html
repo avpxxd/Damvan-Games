@@ -399,19 +399,26 @@
                     </div>
 
                     <div>
-                        <div class="flex items-center justify-between mb-1">
+                        <div class="flex items-center justify-between mb-1.5">
                             <label class="block text-xs font-sans font-bold text-slate-400 uppercase tracking-wider">
-                                Player Nickname
+                                Assigned Player Name
                             </label>
-                            <span class="text-[11px] font-mono text-slate-400">Click 🎲 to roll</span>
+                            <span class="text-[11px] font-mono text-emerald-400">🔒 System Generated</span>
                         </div>
                         <div class="flex items-center gap-2">
-                            <input type="text" id="nicknameInput" maxlength="32" required placeholder="e.g. bean-burrito-man"
-                                class="flex-grow px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700/80 text-slate-100 font-sans text-base sm:text-lg font-bold focus:outline-none focus:border-sky-400 focus:bg-slate-800/80 transition-colors backdrop-blur-sm">
-                            <button type="button" onclick="app.rollNewRandomName()" class="px-3.5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-200 text-lg transition-all active:scale-95 flex-shrink-0" title="Roll New Random 3-Word Name">
-                                🎲
+                            <!-- Locked, read-only system-generated name display (prevents custom typing/XSS) -->
+                            <div class="flex-grow flex items-center justify-between px-4 py-3 rounded-xl bg-slate-900/90 border border-slate-700/80 text-sky-300 font-display text-base sm:text-lg font-bold tracking-wide select-none backdrop-blur-sm shadow-inner overflow-hidden">
+                                <span id="nicknameDisplay" class="truncate">bean-burrito-man</span>
+                                <input type="hidden" id="nicknameInput" value="bean-burrito-man">
+                            </div>
+                            <button type="button" onclick="app.rollNewRandomName()" class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-slate-200 font-sans font-bold text-sm transition-all active:scale-95 flex items-center gap-1.5 flex-shrink-0 shadow-md" title="Roll Another Random Name">
+                                <span>🎲</span>
+                                <span>Roll</span>
                             </button>
                         </div>
+                        <p class="text-[11px] text-slate-500 font-sans mt-1.5">
+                            Names are generated exclusively from our vetted Jackbox word vault to keep the party safe!
+                        </p>
                     </div>
 
                     <button type="submit"
@@ -1010,10 +1017,11 @@
                 if (floatingAudio) floatingAudio.classList.add('hidden');
 
                 if (!this.userProfile.nickname && tabName === 'ARENA') {
+                    const safeName = this.generateRandomName();
                     const nickInput = document.getElementById('nicknameInput');
-                    if (nickInput && !nickInput.value) {
-                        nickInput.value = this.generateRandomName();
-                    }
+                    const nickDisplay = document.getElementById('nicknameDisplay');
+                    if (nickInput) nickInput.value = safeName;
+                    if (nickDisplay) nickDisplay.textContent = safeName;
                     this.renderAvatarPicker();
                     document.getElementById('viewProfileInit').classList.remove('hidden');
                     return;
@@ -1259,42 +1267,58 @@
             },
 
             /* Avatar & Nickname Profile */
+            NAME_LIST_1: [
+                'bean', 'spicy', 'crispy', 'funky', 'cosmic', 'super', 'turbo', 'snazzy',
+                'disco', 'crunchy', 'cheesy', 'wild', 'glitchy', 'atomic', 'silly', 'magic',
+                'golden', 'hyper', 'zesty', 'pickle', 'waffle', 'nacho', 'taco', 'chili',
+                'bacon', 'noodle', 'potato', 'banana', 'garlic', 'cookie', 'jelly', 'donut',
+                'cheddar', 'tofu', 'guac', 'velvet', 'retro', 'stellar', 'neon', 'fuzzy'
+            ],
+            NAME_LIST_2: [
+                'burrito', 'taco', 'waffle', 'noodle', 'pickle', 'potato', 'banana', 'donut',
+                'nacho', 'biscuit', 'pancake', 'muffin', 'dumpling', 'pizza', 'burger', 'pretzel',
+                'hotdog', 'sandwich', 'meatball', 'bagel', 'sushi', 'avocado', 'popcorn', 'peanut',
+                'cupcake', 'lasagna', 'sausage', 'tater', 'cheddar', 'marshmallow', 'ramen', 'cookie'
+            ],
+            NAME_LIST_3: [
+                'man', 'guy', 'dude', 'boss', 'king', 'queen', 'wizard', 'ninja',
+                'bot', 'duck', 'champion', 'hero', 'master', 'legend', 'captain', 'beast',
+                'goblin', 'gremlin', 'guru', 'jester', 'pilot', 'knight', 'detective', 'doctor',
+                'ranger', 'vampire', 'bandit', 'clown', 'pirate', 'gamer', 'samurai', 'monk'
+            ],
+
+            escapeHTML(str) {
+                return String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            },
+
             generateRandomName() {
-                const list1 = [
-                    'bean', 'spicy', 'crispy', 'funky', 'cosmic', 'super', 'turbo', 'snazzy',
-                    'disco', 'crunchy', 'cheesy', 'wild', 'glitchy', 'atomic', 'silly', 'magic',
-                    'golden', 'hyper', 'zesty', 'pickle', 'waffle', 'nacho', 'taco', 'chili',
-                    'bacon', 'noodle', 'potato', 'banana', 'garlic', 'cookie', 'jelly', 'donut',
-                    'cheddar', 'tofu', 'guac', 'velvet', 'retro', 'stellar', 'neon', 'fuzzy'
-                ];
-                const list2 = [
-                    'burrito', 'taco', 'waffle', 'noodle', 'pickle', 'potato', 'banana', 'donut',
-                    'nacho', 'biscuit', 'pancake', 'muffin', 'dumpling', 'pizza', 'burger', 'pretzel',
-                    'hotdog', 'sandwich', 'meatball', 'bagel', 'sushi', 'avocado', 'popcorn', 'peanut',
-                    'cupcake', 'lasagna', 'sausage', 'tater', 'cheddar', 'marshmallow', 'ramen', 'cookie'
-                ];
-                const list3 = [
-                    'man', 'guy', 'dude', 'boss', 'king', 'queen', 'wizard', 'ninja',
-                    'bot', 'duck', 'champion', 'hero', 'master', 'legend', 'captain', 'beast',
-                    'goblin', 'gremlin', 'guru', 'jester', 'pilot', 'knight', 'detective', 'doctor',
-                    'ranger', 'vampire', 'bandit', 'clown', 'pirate', 'gamer', 'samurai', 'monk'
-                ];
-
-                const w1 = list1[Math.floor(Math.random() * list1.length)];
-                let w2 = list2[Math.floor(Math.random() * list2.length)];
+                const w1 = this.NAME_LIST_1[Math.floor(Math.random() * this.NAME_LIST_1.length)];
+                let w2 = this.NAME_LIST_2[Math.floor(Math.random() * this.NAME_LIST_2.length)];
                 if (w2 === w1) w2 = 'burrito';
-                const w3 = list3[Math.floor(Math.random() * list3.length)];
-
+                const w3 = this.NAME_LIST_3[Math.floor(Math.random() * this.NAME_LIST_3.length)];
                 return `${w1}-${w2}-${w3}`;
+            },
+
+            isValidGeneratedName(name) {
+                if (!name || typeof name !== 'string') return false;
+                const parts = name.toLowerCase().trim().split('-');
+                if (parts.length !== 3) return false;
+                return this.NAME_LIST_1.includes(parts[0]) &&
+                       this.NAME_LIST_2.includes(parts[1]) &&
+                       this.NAME_LIST_3.includes(parts[2]);
             },
 
             rollNewRandomName() {
                 const newName = this.generateRandomName();
                 const input = document.getElementById('nicknameInput');
-                if (input) {
-                    input.value = newName;
-                    input.focus();
-                }
+                const display = document.getElementById('nicknameDisplay');
+                if (input) input.value = newName;
+                if (display) display.textContent = newName;
                 this.showToast(`Rolled: ${newName}`, "info");
             },
 
@@ -1322,9 +1346,11 @@
             },
 
             async registerNickname(e) {
-                e.preventDefault();
-                let nick = document.getElementById('nicknameInput').value.trim();
-                if (!nick) {
+                if (e && e.preventDefault) e.preventDefault();
+                let nick = document.getElementById('nicknameInput')?.value || '';
+                
+                // Strict validation: must match valid 3-word structure from whitelist
+                if (!this.isValidGeneratedName(nick)) {
                     nick = this.generateRandomName();
                 }
 
@@ -1669,7 +1695,7 @@
                                 <span class="text-3xl">${p.avatar || '🤡'}</span>
                                 <div>
                                     <p class="font-bold text-slate-200 flex items-center gap-2 text-lg">
-                                        <span>${p.nickname || 'Guest'}</span>
+                                        <span>${this.escapeHTML(p.nickname || 'Guest')}</span>
                                         ${isMe ? '<span class="px-2 py-0.5 text-[10px] bg-sky-900/60 text-sky-300 border border-sky-700/60 rounded uppercase tracking-wider backdrop-blur-sm">YOU</span>' : ''}
                                     </p>
                                 </div>
