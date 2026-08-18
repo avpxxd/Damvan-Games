@@ -577,6 +577,15 @@
                 });
             }
 
+            escapeHTML(str) {
+                return String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#039;');
+            }
+
             renderPlayers() {
                 const container = document.getElementById('playersContainer');
                 const badge = document.getElementById('playerCountBadge');
@@ -605,13 +614,13 @@
                                 <span class="text-xl flex-shrink-0">${avatar}</span>
                                 <div class="min-w-0">
                                     <div class="flex items-center gap-1.5">
-                                        <span class="text-xs font-bold text-slate-100 font-sans truncate">${nick}</span>
+                                        <span class="text-xs font-bold text-slate-100 font-sans truncate">${this.escapeHTML(nick)}</span>
                                         <span class="text-[10px] font-mono text-amber-300 font-bold flex-shrink-0">★${score}</span>
                                     </div>
                                     <span class="text-[10px] font-mono text-slate-400 block truncate" title="${p.id}">ID: ${p.id.slice(0, 10)}...</span>
                                 </div>
                             </div>
-                            <button onclick="adminApp.deletePlayer('${p.id}', '${nick.replace(/'/g, "\\'")}')" title="Boot Player (Kicks back to join screen)" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-xs font-bold transition flex-shrink-0">
+                            <button onclick="adminApp.deletePlayer('${p.id}', '${this.escapeHTML(nick).replace(/'/g, "\\'")}')" title="Boot Player (Kicks back to join screen)" class="px-2 py-1 rounded-lg bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800/60 text-xs font-bold transition flex-shrink-0">
                                 🗑️ Kick
                             </button>
                         </div>
