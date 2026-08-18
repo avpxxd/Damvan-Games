@@ -198,7 +198,7 @@
             <div class="flex items-center gap-3 cursor-pointer group" onclick="app.showTab('ARENA')"
                 title="Back to Game Arena">
                 <div
-                    class="w-10 h-10 rounded-xl bg-slate-800/70 backdrop-blur-md flex items-center justify-center text-xl shadow-md border border-slate-600/50 group-hover:border-sky-400 transition-colors">
+                    class="w-10 h-10 rounded-xl bg-slate-800/70 backdrop-blur-md flex items-center justify-center text-xl shadow-md border border-slate-600/50 transition-colors">
                     📦
                 </div>
                 <div>
@@ -399,11 +399,19 @@
                     </div>
 
                     <div>
-                        <label
-                            class="block text-xs font-sans font-bold text-slate-400 uppercase tracking-wider mb-1">Player
-                            Nickname</label>
-                        <input type="text" id="nicknameInput" maxlength="14" required placeholder="e.g. TriviaChamp"
-                            class="w-full px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700/80 text-slate-100 font-sans text-lg font-bold focus:outline-none focus:border-sky-400 focus:bg-slate-800/80 transition-colors backdrop-blur-sm">
+                        <div class="flex items-center justify-between mb-1">
+                            <label class="block text-xs font-sans font-bold text-slate-400 uppercase tracking-wider">
+                                Player Nickname
+                            </label>
+                            <span class="text-[11px] font-mono text-slate-400">Click 🎲 to roll</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="nicknameInput" maxlength="32" required placeholder="e.g. bean-burrito-man"
+                                class="flex-grow px-4 py-3 rounded-xl bg-slate-900/70 border border-slate-700/80 text-slate-100 font-sans text-base sm:text-lg font-bold focus:outline-none focus:border-sky-400 focus:bg-slate-800/80 transition-colors backdrop-blur-sm">
+                            <button type="button" onclick="app.rollNewRandomName()" class="px-3.5 py-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-200 text-lg transition-all active:scale-95 flex-shrink-0" title="Roll New Random 3-Word Name">
+                                🎲
+                            </button>
+                        </div>
                     </div>
 
                     <button type="submit"
@@ -1002,6 +1010,11 @@
                 if (floatingAudio) floatingAudio.classList.add('hidden');
 
                 if (!this.userProfile.nickname && tabName === 'ARENA') {
+                    const nickInput = document.getElementById('nicknameInput');
+                    if (nickInput && !nickInput.value) {
+                        nickInput.value = this.generateRandomName();
+                    }
+                    this.renderAvatarPicker();
                     document.getElementById('viewProfileInit').classList.remove('hidden');
                     return;
                 }
@@ -1237,6 +1250,45 @@
             },
 
             /* Avatar & Nickname Profile */
+            generateRandomName() {
+                const list1 = [
+                    'bean', 'spicy', 'crispy', 'funky', 'cosmic', 'super', 'turbo', 'snazzy',
+                    'disco', 'crunchy', 'cheesy', 'wild', 'glitchy', 'atomic', 'silly', 'magic',
+                    'golden', 'hyper', 'zesty', 'pickle', 'waffle', 'nacho', 'taco', 'chili',
+                    'bacon', 'noodle', 'potato', 'banana', 'garlic', 'cookie', 'jelly', 'donut',
+                    'cheddar', 'tofu', 'guac', 'velvet', 'retro', 'stellar', 'neon', 'fuzzy'
+                ];
+                const list2 = [
+                    'burrito', 'taco', 'waffle', 'noodle', 'pickle', 'potato', 'banana', 'donut',
+                    'nacho', 'biscuit', 'pancake', 'muffin', 'dumpling', 'pizza', 'burger', 'pretzel',
+                    'hotdog', 'sandwich', 'meatball', 'bagel', 'sushi', 'avocado', 'popcorn', 'peanut',
+                    'cupcake', 'lasagna', 'sausage', 'tater', 'cheddar', 'marshmallow', 'ramen', 'cookie'
+                ];
+                const list3 = [
+                    'man', 'guy', 'dude', 'boss', 'king', 'queen', 'wizard', 'ninja',
+                    'bot', 'duck', 'champion', 'hero', 'master', 'legend', 'captain', 'beast',
+                    'goblin', 'gremlin', 'guru', 'jester', 'pilot', 'knight', 'detective', 'doctor',
+                    'ranger', 'vampire', 'bandit', 'clown', 'pirate', 'gamer', 'samurai', 'monk'
+                ];
+
+                const w1 = list1[Math.floor(Math.random() * list1.length)];
+                let w2 = list2[Math.floor(Math.random() * list2.length)];
+                if (w2 === w1) w2 = 'burrito';
+                const w3 = list3[Math.floor(Math.random() * list3.length)];
+
+                return `${w1}-${w2}-${w3}`;
+            },
+
+            rollNewRandomName() {
+                const newName = this.generateRandomName();
+                const input = document.getElementById('nicknameInput');
+                if (input) {
+                    input.value = newName;
+                    input.focus();
+                }
+                this.showToast(`Rolled: ${newName}`, "info");
+            },
+
             renderAvatarPicker() {
                 const emojis = ['🤡', '👽', '👻', '👾', '🤠', '😈', '🤖', '💩'];
                 const grid = document.getElementById('avatarPickerGrid');
@@ -1262,8 +1314,10 @@
 
             async registerNickname(e) {
                 e.preventDefault();
-                const nick = document.getElementById('nicknameInput').value.trim();
-                if (!nick) return;
+                let nick = document.getElementById('nicknameInput').value.trim();
+                if (!nick) {
+                    nick = this.generateRandomName();
+                }
 
                 this.userProfile.nickname = nick;
                 localStorage.setItem('jgfgjq_nickname', nick);
