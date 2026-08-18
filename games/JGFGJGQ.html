@@ -1139,6 +1139,7 @@
                             console.warn("Profile load bypassed", e);
                         }
 
+                        this.subscribeToPersonalUserDoc();
                         this.subscribeToPresenceAndLeaderboard();
                         this.subscribeToFirestoreQuestions();
                         this.startGlobalSyncEngine();
@@ -1148,10 +1149,18 @@
                         }, 600);
                     };
 
-                    // Listen for existing session
+                    // Listen for existing session or user deletion from Auth
                     onAuthStateChanged(this.auth, (user) => {
                         if (user) {
                             proceedToGame(user);
+                        } else if (this.isConnected) {
+                            console.warn("User deleted from Firebase Auth. Booting back to connect screen...");
+                            this.isConnected = false;
+                            this.currentUser = null;
+                            this.handleUserDeleted("Your user was deleted from Firebase. Reconnecting...");
+                            setTimeout(() => {
+                                this.startConnectionProcess();
+                            }, 800);
                         }
                     });
 
@@ -1340,6 +1349,58 @@
                 this.showTab('ARENA');
             },
 
+            handleUserDeleted(reason = "Your profile was deleted from Firebase. Please pick a nickname to rejoin!") {
+                console.warn("User deletion detected:", reason);
+                this.userProfile.nickname = '';
+                this.userProfile.score = 0;
+                this.userProfile.hasAnsweredCurrent = false;
+                this.userProfile.pendingAnswer = null;
+                localStorage.removeItem('jgfgjq_nickname');
+                localStorage.removeItem('jgfgjq_avatar');
+                this.updateScoreDisplays();
+
+                const nickInput = document.getElementById('nicknameInput');
+                if (nickInput) {
+                    nickInput.value = this.generateRandomName();
+                }
+
+                this.showToast(reason, "error");
+                this.showTab('ARENA'); // Because nickname is now empty, showTab('ARENA') will immediately open the join screen
+            },
+
+            subscribeToPersonalUserDoc() {
+                if (!this.db || !this.userId) return;
+                try {
+                    const userDocRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'global_leaderboard', this.userId);
+                    let initialLoad = true;
+
+                    onSnapshot(userDocRef, (snap) => {
+                        if (initialLoad) {
+                            initialLoad = false;
+                            if (snap.exists()) {
+                                const data = snap.data();
+                                if (data.nickname) this.userProfile.nickname = data.nickname;
+                                if (data.avatar) this.userProfile.avatar = data.avatar;
+                                if (typeof data.score === 'number') this.userProfile.score = data.score;
+                                this.updateScoreDisplays();
+                            }
+                            return;
+                        }
+
+                        // If user has a nickname and document gets deleted in Firestore:
+                        if (!snap.exists() && this.userProfile.nickname) {
+                            this.handleUserDeleted("Your user document was deleted in Firebase. Rejoining...");
+                        }
+                    }, (err) => {
+                        if (err.code === 'permission-denied' || err.code === 'unauthenticated') {
+                            this.handleUserDeleted("Session expired or removed. Please rejoin!");
+                        }
+                    });
+                } catch (e) {
+                    console.warn("Personal user doc listener error:", e);
+                }
+            },
+
             async loadUserProfile() {
                 if (!this.db || !this.userId) return;
                 try {
@@ -1372,7 +1433,7 @@
 
                 // 1. Presence Heartbeat
                 const updatePresence = async () => {
-                    if (!this.userId) return;
+                    if (!this.userId || !this.db) return;
                     try {
                         const presenceRef = doc(this.db, 'artifacts', APP_ID, 'public', 'data', 'online_players', this.userId);
                         await setDoc(presenceRef, {
@@ -1381,7 +1442,9 @@
                             avatar: this.userProfile.avatar || '🤡'
                         }, { merge: true });
                     } catch (e) {
-                        // ignore heartbeat errors
+                        if (e.code === 'permission-denied' || e.code === 'unauthenticated') {
+                            this.handleUserDeleted("User session removed. Please pick a nickname to rejoin!");
+                        }
                     }
                 };
 
